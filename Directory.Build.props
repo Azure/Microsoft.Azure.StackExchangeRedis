@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <VersionPrefix>0.1.0</VersionPrefix>
+    <VersionPrefix>1.1.0</VersionPrefix>
     <Copyright>2023 - $([System.DateTime]::Now.Year) Microsoft, Inc.</Copyright>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <PackageId>$(AssemblyName)</PackageId>
