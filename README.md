@@ -1,33 +1,52 @@
-# Project
+---
+ArtifactType: nupkg
+Documentation: https://learn.microsoft.com/azure/azure-cache-for-redis
+Language: C#
+Tags: Redis,Cache,StackExchange.Redis,Microsoft,Azure
+---
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+# Microsoft.Azure.StackExchangeRedis Extension
+Microsoft.Azure.StackExchangeRedis is an extension of StackExchange.Redis that enables using Azure Active Directory to authenticate connections from a Redis client application to an Azure Cache for Redis. The extension manages the authentication token, including proactively refreshing tokens before they expire to maintain persistent Redis connections over multiple  days.
 
-As the maintainer of this project, please make a few updates:
+## Usage
+1. Add a reference to the [Microsoft.Azure.StackExchangeRedis NuGet package](https://www.nuget.org/packages/Microsoft.Azure.StackExchangeRedis) in your Redis client project
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+2. In your Redis connection code, create a `ConfigurationOptions` instance
+```csharp
+var configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380");
+```
+
+3. Use one of the extension's methods to configure it for Azure:
+```csharp
+// With a system-assigned managed identity
+await configurationOptions.ConfigureForAzureWithSystemAssignedManagedIdentityAsync(principalId);
+
+// With a user-assigned managed identity
+await configurationOptions.ConfigureForAzureWithUserAssignedManagedIdentityAsync(managedIdentityClientId, principalId);
+
+// With a service principal
+await configurationOptions.ConfigureForAzureWithServicePrincipalAsync(clientId, principalId, tenantId, secret);
+```
+
+4. Create the a connection by creating and passing in the ConfigurationOptions to the ConnectionMultiplexer.ConenctAsync
+```csharp
+var connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions);
+```
+
+## Running the sample
+The `sample` directory contains a project showing how to connect to a Redis cache using the various authentication mechanisms supported by this extension. To run the sample: 
+1. [Create an Azure Cache for Redis resource](https://learn.microsoft.com/azure/azure-cache-for-redis/quickstart-create-redis)
+1. Create a [managed identity](https://learn.microsoft.com/azure/active-directory/managed-identities-azure-resources/qs-configure-cli-windows-vm#code-try-10) or [service principal](https://learn.microsoft.com/azure/active-directory/develop/howto-create-service-principal-portal)
+1. `dotnet run <path to Microsoft.Azure.StackExchangeRedis.Sample.csproj>`
+1. Follow the prompts to enter your credentials and test the connection to the cache
+
+NOTE: The sample project uses a `<ProjectReference>` to the extension project in this repo. To run the project on its own using the released Microsoft.Azure.StackExchangeRedis NuGet package, replace the `<ProjectReference>` in `Microsoft.Azure.StackExchangeRedis.Sample.csproj` with a `<PackageReference>`.
 
 ## Contributing
+Please read our [CONTRIBUTING.md](CONTRIBUTING.md) which outlines all of our policies, procedures, and requirements for contributing to this project.
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+## Versioning
+We use [SemVer](https://semver.org/) for versioning. For the versions available, see the [releases](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/releases).
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-## Trademarks
-
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
