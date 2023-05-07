@@ -1,4 +1,5 @@
 <Project>
+
   <PropertyGroup>
     <VersionPrefix>1.1.0</VersionPrefix>
     <Copyright>2023 - $([System.DateTime]::Now.Year) Microsoft, Inc.</Copyright>
@@ -9,18 +10,29 @@
     <PackageReleaseNotes>https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/releases</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-  
+    <SignAssembly>true</SignAssembly>
+    <PublicSign Condition=" '$(OS)' != 'Windows_NT' ">true</PublicSign>
     <LangVersion>11</LangVersion>
+    <Nullable>enable</Nullable>
+    <NullableContextOptions>enable</NullableContextOptions>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/</RepositoryUrl>
-
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
-    <DefaultLanguage>en-US</DefaultLanguage>
     <IncludeSymbols>false</IncludeSymbols>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
+
   <ItemGroup Condition="'$(Configuration)' == 'Release' and '$(SourceRoot)'==''">
     <SourceRoot Include="$(MSBuildThisFileDirectory)/"/>
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
 </Project>

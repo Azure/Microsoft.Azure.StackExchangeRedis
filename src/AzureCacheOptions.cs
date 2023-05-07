@@ -38,19 +38,26 @@ public class AzureCacheOptions
     public bool ThrowOnTokenRefreshFailure = true;
 
     /// <summary>
-    /// Check token every 5 minutes by default and refresh if necessary.
-    /// </summary>
-    internal TimeSpan TokenHeartbeatInterval = TimeSpan.FromMinutes(5);
-
-    /// <summary>
-    /// Refresh token 4 hours before it expires by default.
-    /// Tokens have a 24hr lifespan by default, so this is a generous margin to allow time for recovery of any issues preventing refresh before the token expires.
+    /// How long before expiration should a token be refreshed. 
+    /// Tokens have a 24hr lifespan by default, and the default margin of 4 hours allows time for recovery of any issues preventing refresh before the token expires.
     /// </summary>
     internal TimeSpan TokenExpirationMargin = TimeSpan.FromHours(4);
 
     /// <summary>
-    /// Attempt to acquire a fresh token 5 times before giving up.
+    /// Periodic interval to check token for expiration, acquire new tokens, and re-authenticate connections.
+    /// </summary>
+    internal TimeSpan TokenHeartbeatInterval = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// Number of attempts to acquire a new token.
+    /// If none of the attempts succeed, the same number of attempts will be made at the next timer interval.
     /// </summary>
     internal int MaxTokenRefreshAttempts = 5;
+
+    /// <summary>
+    /// Determines the interval between attempts to acquire a new token.
+    /// By default, wait a number of seconds corresponding to the number of attempts completed.
+    /// </summary>
+    internal Func<int, Exception?, TimeSpan> TokenRefreshBackoff = (int attemptCount, Exception? _) => TimeSpan.FromSeconds(attemptCount);
 
 }

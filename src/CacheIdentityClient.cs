@@ -22,7 +22,7 @@ internal interface ICacheIdentityClient
 
 internal class CacheIdentityClient : ICacheIdentityClient
 {
-    private static readonly string[] AzureCacheForRedisScopes = { "acca5fbb-b7e4-4009-81f1-37e38fd66d78/.default" };
+    private static readonly string[] s_azureCacheForRedisScopes = { "acca5fbb-b7e4-4009-81f1-37e38fd66d78/.default" };
 
     private readonly Func<bool, Task<AuthenticationResult>> _getToken;
 
@@ -43,12 +43,12 @@ internal class CacheIdentityClient : ICacheIdentityClient
             .Build());
 
     private CacheIdentityClient(IManagedIdentityApplication managedIdentityApplication)
-        => _getToken = async (bool forceRefresh) => await managedIdentityApplication.AcquireTokenForManagedIdentity(AzureCacheForRedisScopes[0])
+        => _getToken = async (bool forceRefresh) => await managedIdentityApplication.AcquireTokenForManagedIdentity(s_azureCacheForRedisScopes[0])
             .WithForceRefresh(forceRefresh)
             .ExecuteAsync().ConfigureAwait(false);
 
     private CacheIdentityClient(IConfidentialClientApplication confidentialClientApplication)
-        => _getToken = async (bool forceRefresh) => await confidentialClientApplication!.AcquireTokenForClient(AzureCacheForRedisScopes)
+        => _getToken = async (bool forceRefresh) => await confidentialClientApplication!.AcquireTokenForClient(s_azureCacheForRedisScopes)
             .WithForceRefresh(forceRefresh)
             .ExecuteAsync().ConfigureAwait(false);
 

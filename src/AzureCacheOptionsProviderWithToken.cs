@@ -15,7 +15,7 @@ namespace Microsoft.Azure.StackExchangeRedis;
 /// </summary>
 internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, IAzureCacheTokenEvents
 {
-    internal ICacheIdentityClient _identityClient; // internal so unit tests can inject a fake
+    internal ICacheIdentityClient IdentityClient; // internal so unit tests can inject a fake
     private readonly System.Timers.Timer _tokenRefreshTimer = new();
 
     private readonly AzureCacheOptions _azureCacheOptions;
@@ -39,7 +39,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
             throw new ArgumentException("Principal ID of a managed identity or service principal must be specified", nameof(azureCacheOptions.PrincipalId));
         }
         _userName = azureCacheOptions.PrincipalId;
-        _identityClient = GetIdentityClient(azureCacheOptions);
+        IdentityClient = GetIdentityClient(azureCacheOptions);
 
         _tokenRefreshTimer.Interval = azureCacheOptions.TokenHeartbeatInterval.TotalMilliseconds;
         _tokenRefreshTimer.Elapsed += async (s, e) =>
@@ -168,7 +168,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         {
             try
             {
-                var authenticationResult = await _identityClient.GetTokenAsync(forceRefresh).ConfigureAwait(false);
+                var authenticationResult = await IdentityClient.GetTokenAsync(forceRefresh).ConfigureAwait(false);
 
                 if (authenticationResult != null && authenticationResult.ExpiresOn.UtcDateTime >= _currentTokenExpiry)
                 {
@@ -189,8 +189,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                 lastException = ex;
             }
 
-            // Retry with a linear back-off interval increasing one second per attempt
-            await Task.Delay(TimeSpan.FromSeconds(attemptCount)).ConfigureAwait(false);
+            await Task.Delay(_azureCacheOptions.TokenRefreshBackoff.Invoke(attemptCount, lastException)).ConfigureAwait(false);
         }
 
         // If we get here, we never successfully acquired a token

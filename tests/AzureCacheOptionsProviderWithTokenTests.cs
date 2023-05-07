@@ -34,7 +34,7 @@ public class AzureCacheOptionsProviderWithTokenTests
             PrincipalId = "userName"
         };
         var optionsProviderWithToken = new AzureCacheOptionsProviderWithToken(azureCacheOptions);
-        optionsProviderWithToken._identityClient = fakeIdentityClient; // Override the IIdentityClient created during instantiation of AzureCacheOptionsProviderWithToken 
+        optionsProviderWithToken.IdentityClient = fakeIdentityClient; // Override the IIdentityClient created during instantiation of AzureCacheOptionsProviderWithToken 
 
         configurationOptions!.Defaults = optionsProviderWithToken;
 
