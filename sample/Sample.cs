@@ -16,8 +16,10 @@ WriteLine();
 Write("Enter a number: ");
 var option = ReadLine()?.Trim();
 
-StringWriter connectionLog = new();
+// NOTE: ConnectionMultiplexer instances should be as long-lived as possible. Ideally a single ConnectionMultiplexer per cache is reused over the lifetime of the client application process.
 ConnectionMultiplexer? connectionMultiplexer = null;
+StringWriter connectionLog = new();
+
 try
 {
     switch (option)
@@ -27,7 +29,6 @@ try
             var connectionString = ReadLine()?.Trim();
             WriteLine("Connecting with an access key...");
 
-            // NOTE: ConnectionMultiplexer instances should be as long-lived as possible. Ideally a single ConnectionMultiplexer per cache is reused over the lifetime of the client application process.
             connectionMultiplexer = ConnectionMultiplexer.Connect(connectionString!, AzureCacheForRedis.ConfigureForAzure, connectionLog);
             break;
 
@@ -42,7 +43,6 @@ try
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
             LogTokenEvents(configurationOptions);
 
-            // NOTE: ConnectionMultiplexer instances should be as long-lived as possible. Ideally a single ConnectionMultiplexer per cache is reused over the lifetime of the client application process.
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
 
@@ -59,7 +59,6 @@ try
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
             LogTokenEvents(configurationOptions);
 
-            // NOTE: ConnectionMultiplexer instances should be as long-lived as possible. Ideally a single ConnectionMultiplexer per cache is reused over the lifetime of the client application process.
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
 
@@ -80,7 +79,6 @@ try
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
             LogTokenEvents(configurationOptions);
 
-            // NOTE: ConnectionMultiplexer instances should be as long-lived as possible. Ideally a single ConnectionMultiplexer per cache is reused over the lifetime of the client application process.
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
 
