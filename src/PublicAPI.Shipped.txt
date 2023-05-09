@@ -1,0 +1,25 @@
+﻿#nullable enable
+StackExchange.Redis.AzureCacheForRedis
+static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzure.get -> System.Action<StackExchange.Redis.ConfigurationOptions!>!
+static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, Microsoft.Azure.StackExchangeRedis.AzureCacheOptions! azureCacheOptions) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
+static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureWithServicePrincipalAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, string! clientId, string! principalId, string! tenantId, string! secret) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
+static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureWithSystemAssignedManagedIdentityAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, string! principalId) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
+static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureWithUserAssignedManagedIdentityAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, string! clientId, string! principalId) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
+Microsoft.Azure.StackExchangeRedis.TokenRefreshFailedEventArgs
+Microsoft.Azure.StackExchangeRedis.TokenRefreshFailedEventArgs.Exception.get -> System.Exception?
+Microsoft.Azure.StackExchangeRedis.TokenRefreshFailedEventArgs.Expiry.get -> System.DateTime?
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.AzureCacheOptions() -> void
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ClientId -> string?
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.PrincipalId -> string?
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ServicePrincipalSecret -> string?
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ServicePrincipalTenantId -> string?
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ThrowOnTokenRefreshFailure -> bool
+Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents
+Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.ConnectionReauthenticated -> System.EventHandler<string!>?
+Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.ConnectionReauthenticationFailed -> System.EventHandler<Microsoft.Azure.StackExchangeRedis.ConnectionReauthenticationFailedEventArgs!>?
+Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.TokenRefreshed -> System.EventHandler<Microsoft.Identity.Client.AuthenticationResult!>?
+Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.TokenRefreshFailed -> System.EventHandler<Microsoft.Azure.StackExchangeRedis.TokenRefreshFailedEventArgs!>?
+Microsoft.Azure.StackExchangeRedis.ConnectionReauthenticationFailedEventArgs
+Microsoft.Azure.StackExchangeRedis.ConnectionReauthenticationFailedEventArgs.Endpoint.get -> string?
+Microsoft.Azure.StackExchangeRedis.ConnectionReauthenticationFailedEventArgs.Exception.get -> System.Exception?

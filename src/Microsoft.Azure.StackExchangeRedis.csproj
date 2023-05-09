@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+    <Version>1.1.0</Version>
+    <Authors>Microsoft</Authors>
+    <Description>Extension package for StackExchange.Redis to be used with the Azure Cache for Redis service</Description>
+    <AssemblyName>Microsoft.Azure.StackExchangeRedis</AssemblyName>
+    <AssemblyTitle>Microsoft.Azure.StackExchangeRedis</AssemblyTitle>
+    <PackageId>Microsoft.Azure.StackExchangeRedis</PackageId>
+    <PackageTags>Redis;Cache;StackExchange.Redis;Microsoft;Azure</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.53.0" />
+    <PackageReference Include="StackExchange.Redis" Version="2.6.111" />
+  </ItemGroup>
+
+</Project>
