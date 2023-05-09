@@ -18,7 +18,7 @@ Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ThrowOnTokenRefreshFailure 
 Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents
 Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.ConnectionReauthenticated -> System.EventHandler<string!>?
 Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.ConnectionReauthenticationFailed -> System.EventHandler<Microsoft.Azure.StackExchangeRedis.ConnectionReauthenticationFailedEventArgs!>?
-Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.TokenRefreshed -> System.EventHandler<System.DateTime>?
+Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.TokenRefreshed -> System.EventHandler<Microsoft.Identity.Client.AuthenticationResult!>?
 Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.TokenRefreshFailed -> System.EventHandler<Microsoft.Azure.StackExchangeRedis.TokenRefreshFailedEventArgs!>?
 Microsoft.Azure.StackExchangeRedis.ConnectionReauthenticationFailedEventArgs
 Microsoft.Azure.StackExchangeRedis.ConnectionReauthenticationFailedEventArgs.Endpoint.get -> string?

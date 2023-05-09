@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Identity.Client;
 using StackExchange.Redis;
 
 namespace Microsoft.Azure.StackExchangeRedis;
@@ -99,7 +100,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     public override string? Password => _currentToken;
 
     /// <inheritdoc/>
-    public event EventHandler<DateTime>? TokenRefreshed;
+    public event EventHandler<AuthenticationResult>? TokenRefreshed;
 
     /// <inheritdoc/>
     public event EventHandler<TokenRefreshFailedEventArgs>? TokenRefreshFailed;
@@ -176,7 +177,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                     _currentTokenExpiry = authenticationResult.ExpiresOn.UtcDateTime;
                     _tokenAcquiredTime = DateTime.UtcNow; // Track this time for debugging
 
-                    TokenRefreshed?.Invoke(this, _currentTokenExpiry);
+                    TokenRefreshed?.Invoke(this, authenticationResult);
 
                     // Schedule next refresh
                     _nextRefreshTime = _currentTokenExpiry - _azureCacheOptions.TokenExpirationMargin;

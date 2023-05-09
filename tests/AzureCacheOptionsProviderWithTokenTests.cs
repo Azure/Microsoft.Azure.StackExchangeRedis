@@ -38,14 +38,14 @@ public class AzureCacheOptionsProviderWithTokenTests
 
         configurationOptions!.Defaults = optionsProviderWithToken;
 
-        var fakeTokenRefreshedHandler = A.Fake<EventHandler<DateTime>>();
+        var fakeTokenRefreshedHandler = A.Fake<EventHandler<AuthenticationResult>>();
         optionsProviderWithToken.TokenRefreshed += fakeTokenRefreshedHandler;
 
         // Execute
         await optionsProviderWithToken.AcquireTokenAsync(forceRefresh: false, throwOnFailure: true);
 
         // Assert
-        A.CallTo(() => fakeTokenRefreshedHandler.Invoke(optionsProviderWithToken, A<DateTime>._)).MustHaveHappenedOnceExactly();
+        A.CallTo(() => fakeTokenRefreshedHandler.Invoke(optionsProviderWithToken, A<AuthenticationResult>._)).MustHaveHappenedOnceExactly();
         A.CallTo(() => fakeIdentityClient.GetTokenAsync(false)).MustHaveHappenedOnceExactly();
         Assert.AreEqual("token", configurationOptions.Password);
     }

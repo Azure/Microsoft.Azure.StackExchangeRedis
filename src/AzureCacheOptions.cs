@@ -56,6 +56,7 @@ public class AzureCacheOptions
 
     /// <summary>
     /// Determines the interval between attempts to acquire a new token.
+    /// The function receives an integer indicating how many attempts have been made and the exception necessitating a retry. It returns a TimeSpan that determines the interval to wait before the next attempt.
     /// By default, wait a number of seconds corresponding to the number of attempts completed.
     /// </summary>
     internal Func<int, Exception?, TimeSpan> TokenRefreshBackoff = (int attemptCount, Exception? _) => TimeSpan.FromSeconds(attemptCount);

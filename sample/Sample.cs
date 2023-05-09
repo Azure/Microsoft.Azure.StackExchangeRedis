@@ -27,6 +27,7 @@ try
             var connectionString = ReadLine()?.Trim();
             WriteLine("Connecting with an access key...");
 
+            // NOTE: ConnectionMultiplexer instances should be as long-lived as possible. Ideally a single ConnectionMultiplexer per cache is reused over the lifetime of the client application process.
             connectionMultiplexer = ConnectionMultiplexer.Connect(connectionString!, AzureCacheForRedis.ConfigureForAzure, connectionLog);
             break;
 
@@ -41,6 +42,7 @@ try
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
             LogTokenEvents(configurationOptions);
 
+            // NOTE: ConnectionMultiplexer instances should be as long-lived as possible. Ideally a single ConnectionMultiplexer per cache is reused over the lifetime of the client application process.
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
 
@@ -57,6 +59,7 @@ try
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
             LogTokenEvents(configurationOptions);
 
+            // NOTE: ConnectionMultiplexer instances should be as long-lived as possible. Ideally a single ConnectionMultiplexer per cache is reused over the lifetime of the client application process.
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
 
@@ -77,6 +80,7 @@ try
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
             LogTokenEvents(configurationOptions);
 
+            // NOTE: ConnectionMultiplexer instances should be as long-lived as possible. Ideally a single ConnectionMultiplexer per cache is reused over the lifetime of the client application process.
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
 
@@ -107,12 +111,14 @@ while (true)
     // Read a write a key every 2 minutes and output a '+' to show that the connection is working
     try
     {
+        // NOTE: Always use the *Async() versions of StackExchange.Redis methods if possible (e.g. StringSetAsync(), StringGetAsync())
         var value = await database!.StringGetAsync("key");
         await database.StringSetAsync("key", DateTime.UtcNow.ToString());
         Write("+");
     }
     catch (Exception ex)
     {
+        // NOTE: Production applications should implement a retry strategy to handle any commands that fail
         Error.WriteLine($"Failed to execute a Redis command: {ex}");
     }
 
@@ -125,7 +131,7 @@ static void LogTokenEvents(ConfigurationOptions configurationOptions)
     {
         static void Log(string message) => WriteLine($"{DateTime.Now:s}: {message}");
 
-        tokenEvents.TokenRefreshed += (sender, expiry) => Log($"Token refreshed. New token will expire at {expiry}");
+        tokenEvents.TokenRefreshed += (sender, authenticationResult) => Log($"Token refreshed. New token will expire at {authenticationResult.ExpiresOn}");
         tokenEvents.TokenRefreshFailed += (sender, args) => Log($"Token refresh failed for token expiring at {args.Expiry}: {args.Exception}");
         tokenEvents.ConnectionReauthenticated += (sender, endpoint) => Log($"Re-authenticated connection to '{endpoint}'");
         tokenEvents.ConnectionReauthenticationFailed += (sender, args) => Log($"Re-authentication of connection to '{args.Endpoint}' failed: {args.Exception}");
