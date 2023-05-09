@@ -9,7 +9,12 @@
     <AssemblyTitle>Microsoft.Azure.StackExchangeRedis</AssemblyTitle>
     <PackageId>Microsoft.Azure.StackExchangeRedis</PackageId>
     <PackageTags>Redis;Cache;StackExchange.Redis;Microsoft;Azure</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Identity.Client" Version="4.53.0" />
