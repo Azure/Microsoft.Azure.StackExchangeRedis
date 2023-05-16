@@ -21,10 +21,9 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
     private readonly AzureCacheOptions _azureCacheOptions;
     private readonly string? _userName;
-    private string? _currentToken;
-    private DateTime _currentTokenExpiry = DateTime.MinValue;
-    private DateTime _nextRefreshTime = DateTime.MinValue;
-    private DateTime _tokenAcquiredTime = DateTime.MinValue; // For debugging only
+    private string? _token;
+    private DateTime _tokenAcquiredTime = DateTime.MinValue;
+    private DateTime _tokenExpiry = DateTime.MinValue;
 
     private readonly ConcurrentDictionary<int, CacheConnection> _cacheConnections = new();
     private int _nextConnectionId = 0;
@@ -97,7 +96,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     public override string? User => _userName;
 
     /// <inheritdoc/>
-    public override string? Password => _currentToken;
+    public override string? Password => _token;
 
     /// <inheritdoc/>
     public event EventHandler<AuthenticationResult>? TokenRefreshed;
@@ -112,7 +111,8 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     public event EventHandler<ConnectionReauthenticationFailedEventArgs>? ConnectionReauthenticationFailed;
 
     /// <summary>
-    /// Initialize new Redis connections managed by this instance of the extension
+    /// Initialize new Redis connections managed by this instance of the extension. 
+    /// Each StackExchange.Redis.ConnectionMultiplexer instance using these options will call this method when it first connects to Redis
     /// </summary>
     /// <param name="connectionMultiplexer">The multiplexer that just connected.</param>
     /// <param name="log">The logger for the connection, to emit to the connection output log.</param>
@@ -121,7 +121,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         try
         {
             // This is a new connection, so we can assume it was authenticated with the current token
-            _cacheConnections.TryAdd(_nextConnectionId++, new(connectionMultiplexer, _currentTokenExpiry));
+            _cacheConnections.TryAdd(_nextConnectionId++, new(connectionMultiplexer, _tokenExpiry));
 
             await base.AfterConnectAsync(connectionMultiplexer, log).ConfigureAwait(false);
         }
@@ -143,7 +143,9 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
         try
         {
-            if (DateTime.UtcNow >= _nextRefreshTime)
+            if (_tokenAcquiredTime == DateTime.MinValue // Initial token has not yet been acquired
+                || (_tokenExpiry - _tokenAcquiredTime) <= TimeSpan.Zero // Current expiry is not valid
+                || _azureCacheOptions.ShouldTokenBeRefreshed(_tokenAcquiredTime, _tokenExpiry)) // Token is due for refresh
             {
                 await AcquireTokenAsync(forceRefresh, throwOnFailure).ConfigureAwait(false);
             }
@@ -171,16 +173,13 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
             {
                 var authenticationResult = await IdentityClient.GetTokenAsync(forceRefresh).ConfigureAwait(false);
 
-                if (authenticationResult != null && authenticationResult.ExpiresOn.UtcDateTime >= _currentTokenExpiry)
+                if (authenticationResult != null && authenticationResult.ExpiresOn.UtcDateTime >= _tokenExpiry)
                 {
-                    _currentToken = authenticationResult.AccessToken;
-                    _currentTokenExpiry = authenticationResult.ExpiresOn.UtcDateTime;
-                    _tokenAcquiredTime = DateTime.UtcNow; // Track this time for debugging
+                    _token = authenticationResult.AccessToken;
+                    _tokenAcquiredTime = DateTime.UtcNow;
+                    _tokenExpiry = authenticationResult.ExpiresOn.UtcDateTime;
 
                     TokenRefreshed?.Invoke(this, authenticationResult);
-
-                    // Schedule next refresh
-                    _nextRefreshTime = _currentTokenExpiry - _azureCacheOptions.TokenExpirationMargin;
 
                     return;
                 }
@@ -194,7 +193,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         }
 
         // If we get here, we never successfully acquired a token
-        TokenRefreshFailed?.Invoke(this, new(lastException, _currentTokenExpiry));
+        TokenRefreshFailed?.Invoke(this, new(lastException, _tokenExpiry));
         if (throwOnFailure && lastException != null)
         {
             throw lastException;
@@ -213,7 +212,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
             {
                 try
                 {
-                    if (connection.Value.TokenExpiry >= _currentTokenExpiry)
+                    if (connection.Value.TokenExpiry >= _tokenExpiry)
                     {
                         // This connection has already been authenticated with the current token
                         return;
@@ -253,7 +252,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
                     if (allSucceeded)
                     {
-                        connection.Value.TokenExpiry = _currentTokenExpiry;
+                        connection.Value.TokenExpiry = _tokenExpiry;
                     }
                 }
                 catch (Exception ex)

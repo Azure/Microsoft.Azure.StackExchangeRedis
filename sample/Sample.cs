@@ -102,7 +102,7 @@ finally
 }
 
 // This loop will execute commands on the Redis cache every five seconds indefinitely. 
-// Let it run for more than 24 hours to see how the connection remains functional even after the initial token has expired. 
+// Let it run for longer than a token lifespan (e.g. 24 hours) to see how the connection remains functional even after the initial token has expired. 
 var database = connectionMultiplexer?.GetDatabase();
 while (true)
 {
