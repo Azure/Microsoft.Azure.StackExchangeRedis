@@ -45,7 +45,7 @@ public class AzureCacheOptions
         var lifespan = expiry - acquired;
         var age = DateTime.UtcNow - acquired;
 
-        return (age.Ticks / lifespan.Ticks) > .75; // Refresh if current token has exceeded 75% of its lifespan
+        return ((double)age.Ticks / lifespan.Ticks) > .75; // Refresh if current token has exceeded 75% of its lifespan
     };
 
     /// <summary>
