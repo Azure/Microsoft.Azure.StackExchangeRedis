@@ -29,12 +29,10 @@ internal class CacheIdentityClient : ICacheIdentityClient
 
     internal static ICacheIdentityClient CreateForSystemAssignedManagedIdentity()
         => new CacheIdentityClient(ManagedIdentityApplicationBuilder.Create(ManagedIdentityId.SystemAssigned)
-            .WithExperimentalFeatures()
             .Build());
 
     internal static ICacheIdentityClient CreateForUserAssignedManagedIdentity(string clientId)
         => new CacheIdentityClient(ManagedIdentityApplicationBuilder.Create(ManagedIdentityId.WithUserAssignedClientId(clientId))
-            .WithExperimentalFeatures()
             .Build());
 
     internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, string secret)
