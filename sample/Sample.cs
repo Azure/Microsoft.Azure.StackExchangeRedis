@@ -49,13 +49,13 @@ try
         case "3": // User-Assigned managed identity
             Write("Redis cache host name: ");
             cacheHostName = ReadLine()?.Trim();
-            Write("Managed identity Client ID: ");
-            var managedIdentityClientId = ReadLine()?.Trim();
+            Write("Managed identity Client ID or resource ID: ");
+            var managedIdentityId = ReadLine()?.Trim();
             Write("Managed identity Principal (object) ID ('Username' from the 'Data Access Configuration' blade on the Azure Cache for Redis resource): ");
             principalId = ReadLine()?.Trim();
             WriteLine("Connecting with a user-assigned managed identity...");
 
-            configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithUserAssignedManagedIdentityAsync(managedIdentityClientId!, principalId!);
+            configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithUserAssignedManagedIdentityAsync(managedIdentityId!, principalId!);
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
             LogTokenEvents(configurationOptions);
 
