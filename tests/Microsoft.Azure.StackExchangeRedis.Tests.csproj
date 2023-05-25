@@ -9,10 +9,10 @@
 
   <ItemGroup>
     <PackageReference Include="FakeItEasy" Version="7.4.0" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.53.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="3.0.2" />
-    <PackageReference Include="MSTest.TestFramework" Version="3.0.2" />
+    <PackageReference Include="Microsoft.Identity.Client" Version="4.54.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.0.3" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.0.3" />
   </ItemGroup>
 
   <ItemGroup>

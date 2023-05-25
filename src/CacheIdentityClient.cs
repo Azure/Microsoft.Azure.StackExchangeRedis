@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Microsoft.Identity.Client;
+using Microsoft.Identity.Client.AppConfig;
 using System;
 using System.Threading.Tasks;
 
@@ -27,12 +28,12 @@ internal class CacheIdentityClient : ICacheIdentityClient
     private readonly Func<bool, Task<AuthenticationResult>> _getToken;
 
     internal static ICacheIdentityClient CreateForSystemAssignedManagedIdentity()
-        => new CacheIdentityClient(ManagedIdentityApplicationBuilder.Create()
+        => new CacheIdentityClient(ManagedIdentityApplicationBuilder.Create(ManagedIdentityId.SystemAssigned)
             .WithExperimentalFeatures()
             .Build());
 
     internal static ICacheIdentityClient CreateForUserAssignedManagedIdentity(string clientId)
-        => new CacheIdentityClient(ManagedIdentityApplicationBuilder.Create(clientId)
+        => new CacheIdentityClient(ManagedIdentityApplicationBuilder.Create(ManagedIdentityId.WithUserAssignedClientId(clientId))
             .WithExperimentalFeatures()
             .Build());
 
