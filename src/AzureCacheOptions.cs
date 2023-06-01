@@ -38,10 +38,15 @@ public class AzureCacheOptions
     public bool ThrowOnTokenRefreshFailure = true;
 
     /// <summary>
-    /// How long before expiration should a token be refreshed. 
-    /// Tokens have a 24hr lifespan by default, and the default margin of 4 hours allows time for recovery of any issues preventing refresh before the token expires.
+    /// Determines whether the current token should be refreshed, based on its age and lifespan
     /// </summary>
-    internal TimeSpan TokenExpirationMargin = TimeSpan.FromHours(4);
+    public Func<DateTime, DateTime, bool> ShouldTokenBeRefreshed = (DateTime acquired, DateTime expiry) =>
+    {
+        var lifespan = expiry - acquired;
+        var age = DateTime.UtcNow - acquired;
+
+        return ((double)age.Ticks / lifespan.Ticks) > .75; // Refresh if current token has exceeded 75% of its lifespan
+    };
 
     /// <summary>
     /// Periodic interval to check token for expiration, acquire new tokens, and re-authenticate connections.

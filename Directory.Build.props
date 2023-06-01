@@ -1,7 +1,7 @@
 <Project>
 
   <PropertyGroup>
-    <VersionPrefix>1.1.0</VersionPrefix>
+    <Version>1.1.1</Version>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <PackageId>$(AssemblyName)</PackageId>

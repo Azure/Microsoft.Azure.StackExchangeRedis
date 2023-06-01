@@ -14,6 +14,7 @@ Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ClientId -> string?
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.PrincipalId -> string?
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ServicePrincipalSecret -> string?
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ServicePrincipalTenantId -> string?
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ShouldTokenBeRefreshed -> System.Func<System.DateTime, System.DateTime, bool>!
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ThrowOnTokenRefreshFailure -> bool
 Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents
 Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.ConnectionReauthenticated -> System.EventHandler<string!>?
