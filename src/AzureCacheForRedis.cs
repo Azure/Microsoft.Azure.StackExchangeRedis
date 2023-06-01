@@ -41,7 +41,7 @@ public static class AzureCacheForRedis
     /// Throws on failure by default (configurable in the <see cref="ConfigureForAzureAsync"/> method).
     /// </summary>
     /// <param name="configurationOptions">The configuration to update.</param>
-    /// <param name="clientId">Client ID of the user-assigned managed identity.</param>
+    /// <param name="clientId">Client ID or resource ID of the user-assigned managed identity.</param>
     /// <param name="principalId">Principal (object) ID of the user-assigned managed identity.</param>
     /// <exception cref="MsalServiceException">When the token source is not supported or identified incorrectly.</exception>
     /// <exception cref="HttpRequestException">Unable to contact the identity service to acquire a token.</exception>
