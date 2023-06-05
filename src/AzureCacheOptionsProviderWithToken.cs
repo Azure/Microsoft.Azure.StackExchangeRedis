@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
 using Microsoft.Identity.Client;
 using StackExchange.Redis;
 
@@ -36,7 +37,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
         if (string.IsNullOrWhiteSpace(azureCacheOptions.PrincipalId))
         {
-            throw new ArgumentException("Principal ID of a managed identity or service principal must be specified", nameof(azureCacheOptions.PrincipalId));
+            throw new ArgumentException("Principal ID of a managed identity, token credential, or service principal must be specified", nameof(azureCacheOptions.PrincipalId));
         }
         _userName = azureCacheOptions.PrincipalId;
         IdentityClient = GetIdentityClient(azureCacheOptions);
@@ -79,6 +80,10 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         }
         else // No service principal details supplied
         {
+            if (azureCacheOptions.TokenCredential != null)
+            {
+                return CacheIdentityClient.CreateForTokenCredentialCache(azureCacheOptions.TokenCredential);
+            }
             // Authenticate using a managed identity
             return !string.IsNullOrWhiteSpace(azureCacheOptions.ClientId) ?
                 CacheIdentityClient.CreateForUserAssignedManagedIdentity(azureCacheOptions.ClientId!) // A Client ID was supplied, so authenticate using a user-assigned managed identity
@@ -100,6 +105,9 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
     /// <inheritdoc/>
     public event EventHandler<AuthenticationResult>? TokenRefreshed;
+
+    /// <inheritdoc/>
+    public event EventHandler<AccessToken>? AccessTokenRefreshed;
 
     /// <inheritdoc/>
     public event EventHandler<TokenRefreshFailedEventArgs>? TokenRefreshFailed;
@@ -171,16 +179,42 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         {
             try
             {
-                var authenticationResult = await IdentityClient.GetTokenAsync(forceRefresh).ConfigureAwait(false);
-
-                if (authenticationResult != null && authenticationResult.ExpiresOn.UtcDateTime >= _tokenExpiry)
+                var setTokenData = (string token, DateTime time) =>
                 {
-                    _token = authenticationResult.AccessToken;
+                    _token = token;
+                    _tokenExpiry = time;
                     _tokenAcquiredTime = DateTime.UtcNow;
-                    _tokenExpiry = authenticationResult.ExpiresOn.UtcDateTime;
+                };
+                var receivedToken = false;
+                if (_azureCacheOptions.TokenCredential != null)
+                {
 
-                    TokenRefreshed?.Invoke(this, authenticationResult);
+                    AccessToken? token = await IdentityClient!.GetTokenFromTokenCredentialAsync().ConfigureAwait(false);
+                    receivedToken = token != null;
+                    if (token != null && !StringComparer.OrdinalIgnoreCase.Equals(token.Value.Token, _token))
+                    {
+                        setTokenData(token.Value.Token, token.Value.ExpiresOn.UtcDateTime);
 
+                        AccessTokenRefreshed?.Invoke(this, token.Value);
+
+                        return;
+                    }
+                }
+                else
+                {
+                    var authenticationResult = await IdentityClient!.GetTokenAsync(forceRefresh).ConfigureAwait(false);
+                    receivedToken = authenticationResult != null;
+                    if (authenticationResult != null && !StringComparer.OrdinalIgnoreCase.Equals(authenticationResult.AccessToken, _token))
+                    {
+                        setTokenData(authenticationResult.AccessToken, authenticationResult.ExpiresOn.UtcDateTime);
+
+                        TokenRefreshed?.Invoke(this, authenticationResult);
+
+                        return;
+                    }
+                }
+                if (receivedToken) // We received the same token so no need to retry
+                {
                     return;
                 }
             }

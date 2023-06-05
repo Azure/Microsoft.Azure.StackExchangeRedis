@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using Azure.Core;
 using Microsoft.Identity.Client;
 
 namespace Microsoft.Azure.StackExchangeRedis;
@@ -16,6 +17,12 @@ public interface IAzureCacheTokenEvents
     /// The AuthenticationResult argument passed to subscribers contains the expiry of the new token along with other metadata.
     /// </summary>
     event EventHandler<AuthenticationResult>? TokenRefreshed;
+
+    /// <summary>
+    /// Raised when an AccessToken token is refreshed.
+    /// The AccessToken argument passed contains expiration along with other metadata.
+    /// </summary>
+    event EventHandler<AccessToken>? AccessTokenRefreshed;
 
     /// <summary>
     /// Raised when an attempt to refresh an authentication token fails.
