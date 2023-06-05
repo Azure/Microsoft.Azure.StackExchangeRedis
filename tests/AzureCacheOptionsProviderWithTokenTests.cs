@@ -67,7 +67,7 @@ public class AzureCacheOptionsProviderWithTokenTests
             TokenCredential = tokenCredential
         };
         var optionsProviderWithToken = new AzureCacheOptionsProviderWithToken(azureCacheOptions);
-        optionsProviderWithToken.IdentityClient = fakeTokenCredentialClient; // Override the ITokenCredentialClient created during instantiation of AzureCacheOptionsProviderWithToken
+        optionsProviderWithToken.IdentityClient = fakeTokenCredentialClient; // Override the IIdentityClient created during instantiation of AzureCacheOptionsProviderWithToken
         configurationOptions!.Defaults = optionsProviderWithToken;
 
         var fakeTokenRefreshedHandler = A.Fake<EventHandler<AccessToken>>();
