@@ -4,6 +4,7 @@
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Azure.Core;
 using Microsoft.Azure.StackExchangeRedis;
 using Microsoft.Identity.Client;
 
@@ -78,6 +79,22 @@ public static class AzureCacheForRedis
             }).ConfigureAwait(false);
 
     /// <summary>
+    /// Configures a Redis connection authenticated using a token credential.
+    /// </summary>
+    /// <param name="configurationOptions">The configuration to update.</param>
+    /// <param name="principalId">The user to be used for authentication.</param>
+    /// <param name="tokenCredential">The TokenCredential to be used.</param>
+    /// <returns></returns>
+    public static async Task<ConfigurationOptions> ConfigureForAzureWithTokenCredentialAsync(this ConfigurationOptions configurationOptions, string principalId, TokenCredential tokenCredential)
+        => await ConfigureForAzureAsync(
+            configurationOptions,
+            new AzureCacheOptions()
+            {
+                PrincipalId = principalId,
+                TokenCredential = tokenCredential
+            }).ConfigureAwait(false);
+
+    /// <summary>
     /// Configures a connection to an Azure Cache for Redis using advanced options.
     /// </summary>
     /// <param name="configurationOptions">The configuration to update.</param>
@@ -91,7 +108,7 @@ public static class AzureCacheForRedis
         var optionsProvider = new AzureCacheOptionsProviderWithToken(azureCacheOptions);
 
         await optionsProvider.AcquireTokenAsync(forceRefresh: false, azureCacheOptions.ThrowOnTokenRefreshFailure).ConfigureAwait(false);
-        
+
         configurationOptions.Defaults = optionsProvider;
 
         return configurationOptions;

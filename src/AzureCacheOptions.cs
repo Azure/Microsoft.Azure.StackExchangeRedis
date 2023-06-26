@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using Azure.Core;
 
 namespace Microsoft.Azure.StackExchangeRedis;
 
@@ -31,6 +32,11 @@ public class AzureCacheOptions
     /// Service principal secret used to authenticate a connection to Redis.
     /// </summary>
     public string? ServicePrincipalSecret;
+
+    /// <summary>
+    /// Token Credential Cache used to authenticate a connection to Redis.
+    /// </summary>
+    public TokenCredential? TokenCredential;
 
     /// <summary>
     /// Whether or not to throw an exception on failure to refresh an expiring AAD token.
