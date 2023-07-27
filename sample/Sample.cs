@@ -43,7 +43,7 @@ try
 
             var configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithSystemAssignedManagedIdentityAsync(principalId!);
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            LogTokenEvents(configurationOptions, option);
+            LogTokenEvents(configurationOptions);
 
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
@@ -59,7 +59,7 @@ try
 
             configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithUserAssignedManagedIdentityAsync(managedIdentityId!, principalId!);
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            LogTokenEvents(configurationOptions, option);
+            LogTokenEvents(configurationOptions);
 
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
@@ -79,7 +79,7 @@ try
 
             configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithServicePrincipalAsync(clientId!, principalId!, tenantId!, secret!);
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            LogTokenEvents(configurationOptions, option);
+            LogTokenEvents(configurationOptions);
 
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
@@ -93,7 +93,7 @@ try
 
             configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithTokenCredentialAsync(principalId!, new DefaultAzureCredential());
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            LogTokenEvents(configurationOptions, option);
+            LogTokenEvents(configurationOptions, true);
 
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
@@ -139,12 +139,12 @@ while (true)
     await Task.Delay(TimeSpan.FromMinutes(2));
 }
 
-static void LogTokenEvents(ConfigurationOptions configurationOptions, string option)
+static void LogTokenEvents(ConfigurationOptions configurationOptions, bool isUsingTokenCredential = false)
 {
     if (configurationOptions.Defaults is IAzureCacheTokenEvents tokenEvents)
     {
         static void Log(string message) => WriteLine($"{DateTime.Now:s}: {message}");
-        if (option.Equals("5"))
+        if (isUsingTokenCredential)
         {
             tokenEvents.AccessTokenRefreshed += (sender, accessToken) => Log($"Token refreshed. New token will expire at {accessToken.ExpiresOn}");
         }
