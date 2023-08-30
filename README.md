@@ -13,7 +13,7 @@ The Microsoft.Azure.StackExchangeRedis package is an extension for the StackExch
 
 2. In your Redis connection code, create a `ConfigurationOptions` instance
 ```csharp
-var configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380");
+var configurationOptions = ConfigurationOptions.Parse($"{cacheHostName}:6380");
 ```
 
 3. Use one of the extension's methods to configure the options for Azure:
