@@ -12,7 +12,7 @@ WriteLine(
     2. Authenticate using a system-assigned managed identity
     3. Authenticate using a user-assigned managed identity
     4. Authenticate using service principal
-    5. Authenticate using token credential
+    5. Authenticate using TokenCredential
     6. Exit");
 WriteLine();
 Write("Enter a number: ");
@@ -84,16 +84,16 @@ try
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
 
-        case "5": //Token Credential using Visual Studio
+        case "5": // DefaultAzureCredential 
             Write("Redis cache host name: ");
             cacheHostName = ReadLine()?.Trim();
-            Write("Principal (object) ID ('Username' from the 'Data Access Configuration' blade on the Azure Cache for Redis resource): ");
-            principalId = ReadLine()?.Trim();
+            Write("'Username' from the 'Data Access Configuration' blade on the Azure Cache for Redis resource): ");
+            string? username = ReadLine()?.Trim();
             Write("Connecting using token credential...");
 
-            configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithTokenCredentialAsync(principalId!, new DefaultAzureCredential());
+            configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithTokenCredentialAsync(username!, new DefaultAzureCredential());
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            LogTokenEvents(configurationOptions, true);
+            LogTokenEvents(configurationOptions);
 
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
@@ -139,20 +139,12 @@ while (true)
     await Task.Delay(TimeSpan.FromMinutes(2));
 }
 
-static void LogTokenEvents(ConfigurationOptions configurationOptions, bool isUsingTokenCredential = false)
+static void LogTokenEvents(ConfigurationOptions configurationOptions)
 {
     if (configurationOptions.Defaults is IAzureCacheTokenEvents tokenEvents)
     {
         static void Log(string message) => WriteLine($"{DateTime.Now:s}: {message}");
-        if (isUsingTokenCredential)
-        {
-            tokenEvents.AccessTokenRefreshed += (sender, accessToken) => Log($"Token refreshed. New token will expire at {accessToken.ExpiresOn}");
-        }
-        else
-        {
-            tokenEvents.TokenRefreshed += (sender, authenticationResult) => Log($"Token refreshed. New token will expire at {authenticationResult.ExpiresOn}");
-        }
-
+        tokenEvents.TokenRefreshed += (sender, accessToken) => Log($"Token refreshed. New token will expire at {accessToken.ExpiresOn}");
         tokenEvents.TokenRefreshFailed += (sender, args) => Log($"Token refresh failed for token expiring at {args.Expiry}: {args.Exception}");
         tokenEvents.ConnectionReauthenticated += (sender, endpoint) => Log($"Re-authenticated connection to '{endpoint}'");
         tokenEvents.ConnectionReauthenticationFailed += (sender, args) => Log($"Re-authentication of connection to '{args.Endpoint}' failed: {args.Exception}");

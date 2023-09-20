@@ -3,6 +3,7 @@
 
 using System;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
 using Microsoft.Azure.StackExchangeRedis;
@@ -84,14 +85,16 @@ public static class AzureCacheForRedis
     /// <param name="configurationOptions">The configuration to update.</param>
     /// <param name="principalId">The user to be used for authentication.</param>
     /// <param name="tokenCredential">The TokenCredential to be used.</param>
+    /// <param name="cancellationToken">Optional parameter for a CancellationToken</param>
     /// <returns></returns>
-    public static async Task<ConfigurationOptions> ConfigureForAzureWithTokenCredentialAsync(this ConfigurationOptions configurationOptions, string principalId, TokenCredential tokenCredential)
+    public static async Task<ConfigurationOptions> ConfigureForAzureWithTokenCredentialAsync(this ConfigurationOptions configurationOptions, string principalId, TokenCredential tokenCredential, CancellationToken cancellationToken = default)
         => await ConfigureForAzureAsync(
             configurationOptions,
             new AzureCacheOptions()
             {
                 PrincipalId = principalId,
-                TokenCredential = tokenCredential
+                TokenCredential = tokenCredential,
+                CancellationToken = cancellationToken
             }).ConfigureAwait(false);
 
     /// <summary>

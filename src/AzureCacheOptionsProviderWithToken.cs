@@ -6,8 +6,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Azure.Core;
-using Microsoft.Identity.Client;
 using StackExchange.Redis;
 
 namespace Microsoft.Azure.StackExchangeRedis;
@@ -24,7 +22,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     private readonly string? _userName;
     private string? _token;
     private DateTime _tokenAcquiredTime = DateTime.MinValue;
-    private DateTime _tokenExpiry = DateTime.MinValue;
+    private DateTime _tokenExpiry = DateTime.UtcNow;
 
     private readonly ConcurrentDictionary<int, CacheConnection> _cacheConnections = new();
     private int _nextConnectionId = 0;
@@ -37,7 +35,11 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
         if (string.IsNullOrWhiteSpace(azureCacheOptions.PrincipalId))
         {
-            throw new ArgumentException("Principal ID of a managed identity, token credential, or service principal must be specified", nameof(azureCacheOptions.PrincipalId));
+            throw new ArgumentException("Principal ID of a managed identity, or service principal must be specified", nameof(azureCacheOptions.PrincipalId));
+        }
+        if (azureCacheOptions.TokenCredential != null && string.IsNullOrWhiteSpace(azureCacheOptions.PrincipalId))
+        {
+            throw new ArgumentException("A username must be specified to use TokenCredential.");
         }
         _userName = azureCacheOptions.PrincipalId;
         IdentityClient = GetIdentityClient(azureCacheOptions);
@@ -78,12 +80,12 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
             return CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId!, azureCacheOptions.ServicePrincipalTenantId!, azureCacheOptions.ServicePrincipalSecret!);
         }
+        else if (azureCacheOptions.TokenCredential != null) // A TokenCredential is supplied, authenticate using TokenCredential
+        {
+            return CacheIdentityClient.CreateForTokenCredential(azureCacheOptions.TokenCredential, azureCacheOptions.CancellationToken);
+        }
         else // No service principal details supplied
         {
-            if (azureCacheOptions.TokenCredential != null)
-            {
-                return CacheIdentityClient.CreateForTokenCredentialCache(azureCacheOptions.TokenCredential);
-            }
             // Authenticate using a managed identity
             return !string.IsNullOrWhiteSpace(azureCacheOptions.ClientId) ?
                 CacheIdentityClient.CreateForUserAssignedManagedIdentity(azureCacheOptions.ClientId!) // A Client ID was supplied, so authenticate using a user-assigned managed identity
@@ -104,10 +106,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     public override string? Password => _token;
 
     /// <inheritdoc/>
-    public event EventHandler<AuthenticationResult>? TokenRefreshed;
-
-    /// <inheritdoc/>
-    public event EventHandler<AccessToken>? AccessTokenRefreshed;
+    public event EventHandler<TokenResult>? TokenRefreshed;
 
     /// <inheritdoc/>
     public event EventHandler<TokenRefreshFailedEventArgs>? TokenRefreshFailed;
@@ -179,42 +178,22 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         {
             try
             {
-                var setTokenData = (string token, DateTime time) =>
-                {
-                    _token = token;
-                    _tokenExpiry = time;
-                    _tokenAcquiredTime = DateTime.UtcNow;
-                };
-                var receivedToken = false;
+                TokenResult tokenResult;
                 if (_azureCacheOptions.TokenCredential != null)
                 {
 
-                    AccessToken? token = await IdentityClient!.GetTokenFromTokenCredentialAsync().ConfigureAwait(false);
-                    receivedToken = token != null;
-                    if (token != null && !StringComparer.OrdinalIgnoreCase.Equals(token.Value.Token, _token))
-                    {
-                        setTokenData(token.Value.Token, token.Value.ExpiresOn.UtcDateTime);
-
-                        AccessTokenRefreshed?.Invoke(this, token.Value);
-
-                        return;
-                    }
+                    tokenResult = await IdentityClient!.GetTokenAsync().ConfigureAwait(false);
                 }
                 else
                 {
-                    var authenticationResult = await IdentityClient!.GetTokenAsync(forceRefresh).ConfigureAwait(false);
-                    receivedToken = authenticationResult != null;
-                    if (authenticationResult != null && !StringComparer.OrdinalIgnoreCase.Equals(authenticationResult.AccessToken, _token))
-                    {
-                        setTokenData(authenticationResult.AccessToken, authenticationResult.ExpiresOn.UtcDateTime);
-
-                        TokenRefreshed?.Invoke(this, authenticationResult);
-
-                        return;
-                    }
+                    tokenResult = await IdentityClient!.GetTokenAsync(forceRefresh).ConfigureAwait(false);
                 }
-                if (receivedToken) // We received the same token so no need to retry
+                var leeway = TimeSpan.FromSeconds(30); // Sometimes the updated token may actually have an expiry a few seconds shorter than the original
+                if (tokenResult != null && tokenResult.ExpiresOn.UtcDateTime >= _tokenExpiry.Subtract(leeway))
                 {
+                    _token = tokenResult.Token;
+                    _tokenExpiry = tokenResult.ExpiresOn.UtcDateTime;
+                    TokenRefreshed?.Invoke(this, tokenResult);
                     return;
                 }
             }
