@@ -110,7 +110,7 @@ public static class AzureCacheForRedis
     {
         var optionsProvider = new AzureCacheOptionsProviderWithToken(azureCacheOptions);
 
-        await optionsProvider.AcquireTokenAsync(forceRefresh: false, azureCacheOptions.ThrowOnTokenRefreshFailure).ConfigureAwait(false);
+        await optionsProvider.AcquireTokenAsync(azureCacheOptions.ThrowOnTokenRefreshFailure).ConfigureAwait(false);
 
         configurationOptions.Defaults = optionsProvider;
 

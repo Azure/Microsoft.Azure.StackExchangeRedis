@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System;
+using Azure.Core;
+using Microsoft.Identity.Client;
 
 namespace Microsoft.Azure.StackExchangeRedis;
 
@@ -29,5 +31,25 @@ public class TokenResult
     {
         Token = token;
         ExpiresOn = expiresOn;
+    }
+
+    /// <summary>
+    /// Creates a TokenResult from an AuthenticationResult.
+    /// </summary>
+    /// <param name="authenticationResult">An AuthenticationResult from getting a token through the Microsoft Identity Client.</param>
+    public TokenResult(AuthenticationResult authenticationResult)
+    {
+        Token = authenticationResult.AccessToken;
+        ExpiresOn = authenticationResult.ExpiresOn;
+    }
+
+    /// <summary>
+    /// Creates a TokenResult from an AccessToken.
+    /// </summary>
+    /// <param name="accessToken">An AccessToken from a TokenCredential.</param>
+    public TokenResult(AccessToken accessToken)
+    {
+        Token = accessToken.Token;
+        ExpiresOn = accessToken.ExpiresOn;
     }
 }

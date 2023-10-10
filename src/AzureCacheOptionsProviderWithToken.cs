@@ -22,7 +22,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     private readonly string? _userName;
     private string? _token;
     private DateTime _tokenAcquiredTime = DateTime.MinValue;
-    private DateTime _tokenExpiry = DateTime.UtcNow;
+    private DateTime _tokenExpiry = DateTime.UtcNow; // Setting a valid DateTime value to allow us to subtract a leeway
 
     private readonly ConcurrentDictionary<int, CacheConnection> _cacheConnections = new();
     private int _nextConnectionId = 0;
@@ -49,7 +49,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         {
             try
             {
-                await EnsureAuthenticationAsync(forceRefresh: true, throwOnFailure: false).ConfigureAwait(false);
+                await EnsureAuthenticationAsync(throwOnFailure: false).ConfigureAwait(false);
             }
             catch
             {
@@ -139,7 +139,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     }
 
     private int _ensureAuthenticationInProgress = 0;
-    private async Task EnsureAuthenticationAsync(bool forceRefresh, bool throwOnFailure = true)
+    private async Task EnsureAuthenticationAsync(bool throwOnFailure = true)
     {
         // Take the lock
         if (1 == Interlocked.Exchange(ref _ensureAuthenticationInProgress, 1))
@@ -154,7 +154,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                 || (_tokenExpiry - _tokenAcquiredTime) <= TimeSpan.Zero // Current expiry is not valid
                 || _azureCacheOptions.ShouldTokenBeRefreshed(_tokenAcquiredTime, _tokenExpiry)) // Token is due for refresh
             {
-                await AcquireTokenAsync(forceRefresh, throwOnFailure).ConfigureAwait(false);
+                await AcquireTokenAsync(throwOnFailure).ConfigureAwait(false);
             }
 
             await ReauthenticateConnectionsAsync().ConfigureAwait(false);
@@ -169,25 +169,15 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     /// <summary>
     /// Acquires a token to authenticate connections to Azure Cache for Redis
     /// </summary>
-    /// <param name="forceRefresh"><see langword="false"/> to use a token from the local cache, or <see langword="true"/> to force a refresh from AAD</param>
     /// <param name="throwOnFailure"><see langword="true"/> to throw on failure, <see langword="false"/> to suppress handle exceptions and retry</param>
-    internal async Task AcquireTokenAsync(bool forceRefresh, bool throwOnFailure)
+    internal async Task AcquireTokenAsync(bool throwOnFailure)
     {
         Exception? lastException = null;
         for (var attemptCount = 0; attemptCount < _azureCacheOptions.MaxTokenRefreshAttempts; ++attemptCount)
         {
             try
             {
-                TokenResult tokenResult;
-                if (_azureCacheOptions.TokenCredential != null)
-                {
-
-                    tokenResult = await IdentityClient!.GetTokenAsync().ConfigureAwait(false);
-                }
-                else
-                {
-                    tokenResult = await IdentityClient!.GetTokenAsync(forceRefresh).ConfigureAwait(false);
-                }
+                TokenResult tokenResult = await IdentityClient!.GetTokenAsync().ConfigureAwait(false);
                 var leeway = TimeSpan.FromSeconds(30); // Sometimes the updated token may actually have an expiry a few seconds shorter than the original
                 if (tokenResult != null && tokenResult.ExpiresOn.UtcDateTime >= _tokenExpiry.Subtract(leeway))
                 {

@@ -16,7 +16,7 @@ public class AzureCacheOptionsProviderWithTokenTests
         // Arrange
         var tokenResult = new TokenResult("token", DateTime.UtcNow);
         var fakeIdentityClient = A.Fake<ICacheIdentityClient>();
-        A.CallTo(() => fakeIdentityClient.GetTokenAsync(A<bool>._)).Returns(tokenResult);
+        A.CallTo(() => fakeIdentityClient.GetTokenAsync()).Returns(tokenResult);
 
         var configurationOptions = new ConfigurationOptions();
         var azureCacheOptions = new AzureCacheOptions()
@@ -32,11 +32,11 @@ public class AzureCacheOptionsProviderWithTokenTests
         optionsProviderWithToken.TokenRefreshed += fakeTokenRefreshedHandler;
 
         // Execute
-        await optionsProviderWithToken.AcquireTokenAsync(forceRefresh: false, throwOnFailure: true);
+        await optionsProviderWithToken.AcquireTokenAsync(throwOnFailure: true);
 
         // Assert
         A.CallTo(() => fakeTokenRefreshedHandler.Invoke(optionsProviderWithToken, A<TokenResult>._)).MustHaveHappenedOnceExactly();
-        A.CallTo(() => fakeIdentityClient.GetTokenAsync(false)).MustHaveHappenedOnceExactly();
+        A.CallTo(() => fakeIdentityClient.GetTokenAsync()).MustHaveHappenedOnceExactly();
         Assert.AreEqual("token", configurationOptions.Password);
     }
 
@@ -63,7 +63,7 @@ public class AzureCacheOptionsProviderWithTokenTests
         optionsProviderWithToken.TokenRefreshed += fakeTokenRefreshedHandler;
 
         //Execute
-        await optionsProviderWithToken.AcquireTokenAsync(forceRefresh: false, throwOnFailure: true);
+        await optionsProviderWithToken.AcquireTokenAsync(throwOnFailure: true);
 
         //Assert
         A.CallTo(() => fakeTokenRefreshedHandler.Invoke(optionsProviderWithToken, A<TokenResult>._)).MustHaveHappenedOnceExactly();

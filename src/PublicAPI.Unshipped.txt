@@ -8,5 +8,7 @@ Microsoft.Azure.StackExchangeRedis.TokenResult.ExpiresOn.get -> System.DateTimeO
 Microsoft.Azure.StackExchangeRedis.TokenResult.ExpiresOn.set -> void
 Microsoft.Azure.StackExchangeRedis.TokenResult.Token.get -> string!
 Microsoft.Azure.StackExchangeRedis.TokenResult.Token.set -> void
+Microsoft.Azure.StackExchangeRedis.TokenResult.TokenResult(Azure.Core.AccessToken accessToken) -> void
+Microsoft.Azure.StackExchangeRedis.TokenResult.TokenResult(Microsoft.Identity.Client.AuthenticationResult! authenticationResult) -> void
 Microsoft.Azure.StackExchangeRedis.TokenResult.TokenResult(string! token, System.DateTimeOffset expiresOn) -> void
 static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureWithTokenCredentialAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, string! principalId, Azure.Core.TokenCredential! tokenCredential, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
