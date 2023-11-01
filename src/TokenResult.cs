@@ -22,7 +22,6 @@ public class TokenResult
     /// </summary>
     public DateTimeOffset ExpiresOn { get; set; }
 
-
     /// <summary>
     /// Creates a TokenResult from an AuthenticationResult.
     /// </summary>
