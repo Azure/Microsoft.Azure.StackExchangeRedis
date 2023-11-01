@@ -11,8 +11,8 @@ namespace Microsoft.Azure.StackExchangeRedis;
 public interface IAzureCacheTokenEvents
 {
     /// <summary>
-    /// Raised when a TokenResult token is refreshed.
-    /// The AccessToken argument passed contains expiration along with the Tokens value.
+    /// Raised when an authentication token is refreshed.
+    /// The TokenResult argument passed to handler contains the token and its expiry.
     /// </summary>
     event EventHandler<TokenResult>? TokenRefreshed;
 

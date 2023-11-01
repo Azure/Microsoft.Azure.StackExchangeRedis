@@ -18,20 +18,10 @@ public class TokenResult
     public string Token { get; set; }
 
     /// <summary>
-    /// Expiration for the acquired token.
+    /// Expiry for the acquired token.
     /// </summary>
     public DateTimeOffset ExpiresOn { get; set; }
 
-    /// <summary>
-    /// Create a TokenResult.
-    /// </summary>
-    /// <param name="token">The token acquired.</param>
-    /// <param name="expiresOn">The expiration for the token.</param>
-    public TokenResult(string token, DateTimeOffset expiresOn)
-    {
-        Token = token;
-        ExpiresOn = expiresOn;
-    }
 
     /// <summary>
     /// Creates a TokenResult from an AuthenticationResult.

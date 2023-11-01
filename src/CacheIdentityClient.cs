@@ -26,7 +26,7 @@ internal class CacheIdentityClient : ICacheIdentityClient
 {
     private static readonly string[] s_azureCacheForRedisScopes = { "acca5fbb-b7e4-4009-81f1-37e38fd66d78/.default" };
 
-    private readonly Func<Task<TokenResult>> _getTokenResult;
+    private readonly Func<Task<TokenResult>> _getToken;
 
     internal static ICacheIdentityClient CreateForSystemAssignedManagedIdentity()
         => new CacheIdentityClient(ManagedIdentityApplicationBuilder.Create(ManagedIdentityId.SystemAssigned)
@@ -42,21 +42,21 @@ internal class CacheIdentityClient : ICacheIdentityClient
             .WithClientSecret(secret)
             .Build());
 
-    internal static ICacheIdentityClient CreateForTokenCredential(TokenCredential tokenCredential, CancellationToken cancellationToken)
-        => new CacheIdentityClient(tokenCredential, cancellationToken);
+    internal static ICacheIdentityClient CreateForTokenCredential(TokenCredential tokenCredential)
+        => new CacheIdentityClient(tokenCredential);
 
     private CacheIdentityClient(IManagedIdentityApplication managedIdentityApplication)
-        => _getTokenResult = async () => new TokenResult(await managedIdentityApplication.AcquireTokenForManagedIdentity(s_azureCacheForRedisScopes[0])
+        => _getToken = async () => new TokenResult(await managedIdentityApplication.AcquireTokenForManagedIdentity(s_azureCacheForRedisScopes[0])
             .ExecuteAsync().ConfigureAwait(false));
 
     private CacheIdentityClient(IConfidentialClientApplication confidentialClientApplication)
-        => _getTokenResult = async () => new TokenResult(await confidentialClientApplication!.AcquireTokenForClient(s_azureCacheForRedisScopes)
+        => _getToken = async () => new TokenResult(await confidentialClientApplication!.AcquireTokenForClient(s_azureCacheForRedisScopes)
             .ExecuteAsync().ConfigureAwait(false));
 
-    private CacheIdentityClient(TokenCredential tokenCredential, CancellationToken cancellationToken)
-        => _getTokenResult = async () => new TokenResult(await tokenCredential.GetTokenAsync(new TokenRequestContext(s_azureCacheForRedisScopes), cancellationToken));
+    private CacheIdentityClient(TokenCredential tokenCredential)
+        => _getToken = async () => new TokenResult(await tokenCredential.GetTokenAsync(new TokenRequestContext(s_azureCacheForRedisScopes), CancellationToken.None));
 
     public async Task<TokenResult> GetTokenAsync()
-        => await _getTokenResult.Invoke().ConfigureAwait(false);
+        => await _getToken.Invoke().ConfigureAwait(false);
 
 }

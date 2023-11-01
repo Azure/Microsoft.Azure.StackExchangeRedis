@@ -22,3 +22,15 @@ Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.ConnectionReauthentica
 Microsoft.Azure.StackExchangeRedis.ConnectionReauthenticationFailedEventArgs
 Microsoft.Azure.StackExchangeRedis.ConnectionReauthenticationFailedEventArgs.Endpoint.get -> string?
 Microsoft.Azure.StackExchangeRedis.ConnectionReauthenticationFailedEventArgs.Exception.get -> System.Exception?
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.TokenCredential -> Azure.Core.TokenCredential?
+Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.TokenRefreshed -> System.EventHandler<Microsoft.Azure.StackExchangeRedis.TokenResult!>?
+Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.TokenRefreshFailed -> System.EventHandler<Microsoft.Azure.StackExchangeRedis.TokenRefreshFailedEventArgs!>?
+Microsoft.Azure.StackExchangeRedis.TokenResult
+Microsoft.Azure.StackExchangeRedis.TokenResult.ExpiresOn.get -> System.DateTimeOffset
+Microsoft.Azure.StackExchangeRedis.TokenResult.ExpiresOn.set -> void
+Microsoft.Azure.StackExchangeRedis.TokenResult.Token.get -> string!
+Microsoft.Azure.StackExchangeRedis.TokenResult.Token.set -> void
+Microsoft.Azure.StackExchangeRedis.TokenResult.TokenResult(Azure.Core.AccessToken accessToken) -> void
+Microsoft.Azure.StackExchangeRedis.TokenResult.TokenResult(Microsoft.Identity.Client.AuthenticationResult! authenticationResult) -> void
+Microsoft.Azure.StackExchangeRedis.TokenResult.TokenResult(string! token, System.DateTimeOffset expiresOn) -> void
+static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureWithTokenCredentialAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, string! userName, Azure.Core.TokenCredential! tokenCredential) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!

@@ -82,7 +82,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         }
         else if (azureCacheOptions.TokenCredential != null) // A TokenCredential is supplied, authenticate using TokenCredential
         {
-            return CacheIdentityClient.CreateForTokenCredential(azureCacheOptions.TokenCredential, azureCacheOptions.CancellationToken);
+            return CacheIdentityClient.CreateForTokenCredential(azureCacheOptions.TokenCredential);
         }
         else // No service principal details supplied
         {
@@ -177,11 +177,12 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         {
             try
             {
-                TokenResult tokenResult = await IdentityClient!.GetTokenAsync().ConfigureAwait(false);
+                TokenResult tokenResult = await IdentityClient.GetTokenAsync().ConfigureAwait(false);
                 var leeway = TimeSpan.FromSeconds(30); // Sometimes the updated token may actually have an expiry a few seconds shorter than the original
                 if (tokenResult != null && tokenResult.ExpiresOn.UtcDateTime >= _tokenExpiry.Subtract(leeway))
                 {
                     _token = tokenResult.Token;
+                    _tokenAcquiredTime = DateTime.UtcNow;
                     _tokenExpiry = tokenResult.ExpiresOn.UtcDateTime;
                     TokenRefreshed?.Invoke(this, tokenResult);
                     return;

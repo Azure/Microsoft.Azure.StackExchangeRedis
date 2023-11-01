@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Threading;
 using Azure.Core;
 
 namespace Microsoft.Azure.StackExchangeRedis;
@@ -38,11 +37,6 @@ public class AzureCacheOptions
     /// TokenCredential used to authenticate a connection to Redis.
     /// </summary>
     public TokenCredential? TokenCredential;
-
-    /// <summary>
-    /// CancellationToken for TokenCredential
-    /// </summary>
-    public CancellationToken CancellationToken = default;
 
     /// <summary>
     /// Whether or not to throw an exception on failure to refresh an expiring AAD token.
