@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+    <Version>2.0.0</Version>
     <Authors>Microsoft</Authors>
     <Description>Extension package for StackExchange.Redis to be used with the Azure Cache for Redis service</Description>
     <AssemblyName>Microsoft.Azure.StackExchangeRedis</AssemblyName>
@@ -16,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.10.1" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.54.1" />
     <PackageReference Include="StackExchange.Redis" Version="2.6.111" />
   </ItemGroup>

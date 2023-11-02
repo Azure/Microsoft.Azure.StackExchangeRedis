@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using Microsoft.Identity.Client;
 
 namespace Microsoft.Azure.StackExchangeRedis;
 
@@ -12,10 +11,10 @@ namespace Microsoft.Azure.StackExchangeRedis;
 public interface IAzureCacheTokenEvents
 {
     /// <summary>
-    /// Raised when an authentication token is refresh.
-    /// The AuthenticationResult argument passed to subscribers contains the expiry of the new token along with other metadata.
+    /// Raised when an authentication token is refreshed.
+    /// The TokenResult argument passed to handler contains the token and its expiry.
     /// </summary>
-    event EventHandler<AuthenticationResult>? TokenRefreshed;
+    event EventHandler<TokenResult>? TokenRefreshed;
 
     /// <summary>
     /// Raised when an attempt to refresh an authentication token fails.

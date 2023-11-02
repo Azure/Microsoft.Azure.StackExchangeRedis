@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using Azure.Identity;
 using Microsoft.Azure.StackExchangeRedis;
 using StackExchange.Redis;
 using static System.Console;
@@ -11,7 +12,8 @@ WriteLine(
     2. Authenticate using a system-assigned managed identity
     3. Authenticate using a user-assigned managed identity
     4. Authenticate using service principal
-    5. Exit");
+    5. Authenticate using TokenCredential (via DefaultAzureCredential)
+    6. Exit");
 WriteLine();
 Write("Enter a number: ");
 var option = ReadLine()?.Trim();
@@ -82,6 +84,20 @@ try
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
 
+        case "5": // DefaultAzureCredential 
+            Write("Redis cache host name: ");
+            cacheHostName = ReadLine()?.Trim();
+            Write("'Username' from the 'Data Access Configuration' blade on the Azure Cache for Redis resource): ");
+            string? username = ReadLine()?.Trim();
+            Write("Connecting using TokenCredential...");
+
+            configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithTokenCredentialAsync(username!, new DefaultAzureCredential());
+            configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
+            LogTokenEvents(configurationOptions);
+
+            connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
+            break;
+
         default:
             return;
     }
@@ -128,8 +144,7 @@ static void LogTokenEvents(ConfigurationOptions configurationOptions)
     if (configurationOptions.Defaults is IAzureCacheTokenEvents tokenEvents)
     {
         static void Log(string message) => WriteLine($"{DateTime.Now:s}: {message}");
-
-        tokenEvents.TokenRefreshed += (sender, authenticationResult) => Log($"Token refreshed. New token will expire at {authenticationResult.ExpiresOn}");
+        tokenEvents.TokenRefreshed += (sender, tokenResult) => Log($"Token refreshed. New token will expire at {tokenResult.ExpiresOn}");
         tokenEvents.TokenRefreshFailed += (sender, args) => Log($"Token refresh failed for token expiring at {args.Expiry}: {args.Exception}");
         tokenEvents.ConnectionReauthenticated += (sender, endpoint) => Log($"Re-authenticated connection to '{endpoint}'");
         tokenEvents.ConnectionReauthenticationFailed += (sender, args) => Log($"Re-authentication of connection to '{args.Endpoint}' failed: {args.Exception}");
