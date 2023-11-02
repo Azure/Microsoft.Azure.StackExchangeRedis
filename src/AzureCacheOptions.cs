@@ -39,7 +39,7 @@ public class AzureCacheOptions
     public TokenCredential? TokenCredential;
 
     /// <summary>
-    /// Whether or not to throw an exception on failure to refresh an expiring AAD token.
+    /// Whether or not to throw an exception on failure to refresh an expiring Microsoft Entra ID token.
     /// </summary>
     public bool ThrowOnTokenRefreshFailure = true;
 
