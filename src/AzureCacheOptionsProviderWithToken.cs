@@ -11,7 +11,7 @@ using StackExchange.Redis;
 namespace Microsoft.Azure.StackExchangeRedis;
 
 /// <summary>
-/// Redis connection configuration options provider for using Azure Active Directory authentication with Azure Cache for Redis.
+/// Redis connection configuration options provider for using Microsoft Entra ID authentication with Azure Cache for Redis.
 /// </summary>
 internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, IAzureCacheTokenEvents
 {
@@ -94,7 +94,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     }
 
     /// <summary>
-    /// Require SSL on all connections using Azure Active Directory tokens for authentication.
+    /// Require SSL on all connections using Microsoft Entra ID tokens for authentication.
     /// </summary>
     /// <returns>True for all cases.</returns>
     public override bool GetDefaultSsl(EndPointCollection _) => true;

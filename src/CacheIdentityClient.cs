@@ -11,7 +11,7 @@ using Microsoft.Identity.Client.AppConfig;
 namespace Microsoft.Azure.StackExchangeRedis;
 
 /// <summary>
-/// Acquires tokens from Azure Active Directory for authenticating connections to Azure Cache for Redis.
+/// Acquires tokens from Microsoft Entra ID for authenticating connections to Azure Cache for Redis.
 /// </summary>
 internal interface ICacheIdentityClient
 {
