@@ -79,7 +79,7 @@ public static class AzureCacheForRedis
             }).ConfigureAwait(false);
 
     /// <summary>
-    /// Configures a Redis connection authenticated using a token credential.
+    /// Configures a Redis connection authenticated using a TokenCredential.
     /// </summary>
     /// <param name="configurationOptions">The configuration to update.</param>
     /// <param name="userName">The user to be used for authentication.</param>

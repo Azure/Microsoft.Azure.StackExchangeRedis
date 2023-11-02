@@ -3,6 +3,7 @@
 
 using Azure.Core;
 using FakeItEasy;
+using Microsoft.Identity.Client;
 using StackExchange.Redis;
 
 namespace Microsoft.Azure.StackExchangeRedis.Tests;
@@ -14,7 +15,18 @@ public class AzureCacheOptionsProviderWithTokenTests
     public async Task AcquireTokenAsync_Success()
     {
         // Arrange
-        var tokenResult = new TokenResult("token", DateTime.UtcNow);
+        var authenticationResult = new AuthenticationResult(
+            accessToken: "token",
+            isExtendedLifeTimeToken: true,
+            uniqueId: null,
+            expiresOn: DateTime.UtcNow + TimeSpan.FromMinutes(1),
+            extendedExpiresOn: DateTime.UtcNow + TimeSpan.FromMinutes(1),
+            tenantId: string.Empty,
+            account: null,
+            idToken: null,
+            scopes: null,
+            correlationId: default);
+        var tokenResult = new TokenResult(authenticationResult);
         var fakeIdentityClient = A.Fake<ICacheIdentityClient>();
         A.CallTo(() => fakeIdentityClient.GetTokenAsync()).Returns(tokenResult);
 
@@ -44,9 +56,10 @@ public class AzureCacheOptionsProviderWithTokenTests
     public async Task AcquireTokenAsync_UsingTokenCredential_Success()
     {
         // Arrange
-        var token = new TokenResult("token", DateTime.UtcNow);
+        var token = new AccessToken("token", DateTimeOffset.UtcNow + TimeSpan.FromMinutes(1));
+        var tokenResult = new TokenResult(token);
         var fakeTokenCredentialClient = A.Fake<ICacheIdentityClient>();
-        A.CallTo(() => fakeTokenCredentialClient.GetTokenAsync()).Returns(token);
+        A.CallTo(() => fakeTokenCredentialClient.GetTokenAsync()).Returns(tokenResult);
         var tokenCredential = A.Fake<TokenCredential>();
 
         var configurationOptions = new ConfigurationOptions();
