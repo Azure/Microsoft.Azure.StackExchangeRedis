@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -36,10 +37,28 @@ internal class CacheIdentityClient : ICacheIdentityClient
         => new CacheIdentityClient(ManagedIdentityApplicationBuilder.Create(Guid.TryParse(id, out _) ? ManagedIdentityId.WithUserAssignedClientId(id) : ManagedIdentityId.WithUserAssignedResourceId(id))
             .Build());
 
-    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, string secret)
+    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, string secret, AzureCloudInstance cloud)
         => new CacheIdentityClient(ConfidentialClientApplicationBuilder.Create(clientId)
-            .WithTenantId(tenantId)
+            .WithAuthority(cloud, tenantId)
             .WithClientSecret(secret)
+            .Build());
+
+    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, string secret, string cloudUri)
+        => new CacheIdentityClient(ConfidentialClientApplicationBuilder.Create(clientId)
+            .WithAuthority(cloudUri, tenantId)
+            .WithClientSecret(secret)
+            .Build());
+
+    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, X509Certificate2 certificate, AzureCloudInstance cloud)
+        => new CacheIdentityClient(ConfidentialClientApplicationBuilder.Create(clientId)
+            .WithAuthority(cloud, tenantId)
+            .WithCertificate(certificate)
+            .Build());
+
+    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, X509Certificate2 certificate, string cloudUri)
+        => new CacheIdentityClient(ConfidentialClientApplicationBuilder.Create(clientId)
+            .WithAuthority(cloudUri, tenantId)
+            .WithCertificate(certificate)
             .Build());
 
     internal static ICacheIdentityClient CreateForTokenCredential(TokenCredential tokenCredential)
@@ -50,7 +69,7 @@ internal class CacheIdentityClient : ICacheIdentityClient
             .ExecuteAsync().ConfigureAwait(false));
 
     private CacheIdentityClient(IConfidentialClientApplication confidentialClientApplication)
-        => _getToken = async () => new TokenResult(await confidentialClientApplication!.AcquireTokenForClient(s_azureCacheForRedisScopes)
+        => _getToken = async () => new TokenResult(await confidentialClientApplication.AcquireTokenForClient(s_azureCacheForRedisScopes)
             .ExecuteAsync().ConfigureAwait(false));
 
     private CacheIdentityClient(TokenCredential tokenCredential)

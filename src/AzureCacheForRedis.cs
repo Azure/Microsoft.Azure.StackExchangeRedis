@@ -3,6 +3,7 @@
 
 using System;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Azure.Core;
 using Microsoft.Azure.StackExchangeRedis;
@@ -64,10 +65,13 @@ public static class AzureCacheForRedis
     /// <param name="clientId">Client ID of the service principal.</param>
     /// <param name="principalId">Principal (object) ID of the service principal.</param>
     /// <param name="tenantId">Tenant ID of the service principal.</param>
-    /// <param name="secret">Service principal secret.</param>
+    /// <param name="secret">Service principal secret. Either <paramref name="secret"/> or <paramref name="certificate"/> must be provided</param>
+    /// <param name="certificate">Service principal certificate. Either <paramref name="certificate"/> or <paramref name="secret"/> must be provided.</param>
+    /// <param name="cloud">Optional. Provide a value to use an Azure cloud other than the Public cloud.</param>
+    /// <param name="cloudUri">Optional. Provide a value to use an Azure cloud not included in <see cref="AzureCloudInstance"/>. URI format will be similar to <c>https://login.microsoftonline.com)</c></param>
     /// <exception cref="MsalServiceException">When the token source is not supported or identified incorrectly.</exception>
     /// <exception cref="HttpRequestException">Unable to contact the identity service to acquire a token.</exception>
-    public static async Task<ConfigurationOptions> ConfigureForAzureWithServicePrincipalAsync(this ConfigurationOptions configurationOptions, string clientId, string principalId, string tenantId, string secret)
+    public static async Task<ConfigurationOptions> ConfigureForAzureWithServicePrincipalAsync(this ConfigurationOptions configurationOptions, string clientId, string principalId, string tenantId, string? secret = null, X509Certificate2? certificate = null, AzureCloudInstance cloud = AzureCloudInstance.AzurePublic, string? cloudUri = null)
         => await ConfigureForAzureAsync(
             configurationOptions,
             new AzureCacheOptions()
@@ -76,6 +80,9 @@ public static class AzureCacheForRedis
                 PrincipalId = principalId,
                 ServicePrincipalTenantId = tenantId,
                 ServicePrincipalSecret = secret,
+                ServicePrincipalCertificate = certificate,
+                Cloud = cloud,
+                CloudUri = cloudUri,
             }).ConfigureAwait(false);
 
     /// <summary>

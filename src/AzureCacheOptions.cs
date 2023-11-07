@@ -2,7 +2,9 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Security.Cryptography.X509Certificates;
 using Azure.Core;
+using Microsoft.Identity.Client;
 
 namespace Microsoft.Azure.StackExchangeRedis;
 
@@ -32,6 +34,21 @@ public class AzureCacheOptions
     /// Service principal secret used to authenticate a connection to Redis.
     /// </summary>
     public string? ServicePrincipalSecret;
+
+    /// <summary>
+    /// Service principal certificate used to authenticate a connection to Redis.
+    /// </summary>
+    public X509Certificate2? ServicePrincipalCertificate;
+
+    /// <summary>
+    /// Azure cloud where the application is running. Defaults to the Public cloud. To use a sovereign cloud, set to the appropriate <see cref="AzureCloudInstance"/>
+    /// </summary>
+    public AzureCloudInstance Cloud = AzureCloudInstance.AzurePublic;
+
+    /// <summary>
+    /// URI for the Azure cloud where the application is running. Use this for clouds not included in <see cref="AzureCloudInstance"/>
+    /// </summary>
+    public string? CloudUri;
 
     /// <summary>
     /// TokenCredential used to authenticate a connection to Redis.
