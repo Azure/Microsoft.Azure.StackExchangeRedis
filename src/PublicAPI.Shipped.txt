@@ -2,7 +2,7 @@
 StackExchange.Redis.AzureCacheForRedis
 static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzure.get -> System.Action<StackExchange.Redis.ConfigurationOptions!>!
 static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, Microsoft.Azure.StackExchangeRedis.AzureCacheOptions! azureCacheOptions) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
-static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureWithServicePrincipalAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, string! clientId, string! principalId, string! tenantId, string! secret) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
+static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureWithServicePrincipalAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, string! clientId, string! principalId, string! tenantId, string? secret = null, System.Security.Cryptography.X509Certificates.X509Certificate2? certificate = null, Microsoft.Identity.Client.AzureCloudInstance cloud = Microsoft.Identity.Client.AzureCloudInstance.AzurePublic, string? cloudUri = null) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
 static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureWithSystemAssignedManagedIdentityAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, string! principalId) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
 static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureWithUserAssignedManagedIdentityAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, string! clientId, string! principalId) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
 Microsoft.Azure.StackExchangeRedis.TokenRefreshFailedEventArgs
@@ -11,7 +11,10 @@ Microsoft.Azure.StackExchangeRedis.TokenRefreshFailedEventArgs.Expiry.get -> Sys
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.AzureCacheOptions() -> void
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ClientId -> string?
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.Cloud -> Microsoft.Identity.Client.AzureCloudInstance
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.CloudUri -> string?
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.PrincipalId -> string?
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ServicePrincipalCertificate -> System.Security.Cryptography.X509Certificates.X509Certificate2?
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ServicePrincipalSecret -> string?
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ServicePrincipalTenantId -> string?
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ShouldTokenBeRefreshed -> System.Func<System.DateTime, System.DateTime, bool>!

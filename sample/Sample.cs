@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System.Security.Cryptography.X509Certificates;
 using Azure.Identity;
 using Microsoft.Azure.StackExchangeRedis;
 using StackExchange.Redis;
@@ -11,9 +12,10 @@ WriteLine(
     1. Authenticate using an access key
     2. Authenticate using a system-assigned managed identity
     3. Authenticate using a user-assigned managed identity
-    4. Authenticate using service principal
-    5. Authenticate using TokenCredential (via DefaultAzureCredential)
-    6. Exit");
+    4. Authenticate using a service principal secret
+    5. Authenticate using a service principal certificate
+    6. Authenticate using TokenCredential (via DefaultAzureCredential)
+    7. Exit");
 WriteLine();
 Write("Enter a number: ");
 var option = ReadLine()?.Trim();
@@ -29,8 +31,8 @@ try
         case "1": // Access key
             Write("Redis cache connection string: ");
             var connectionString = ReadLine()?.Trim();
-            WriteLine("Connecting with an access key...");
 
+            WriteLine("Connecting with an access key...");
             connectionMultiplexer = ConnectionMultiplexer.Connect(connectionString!, AzureCacheForRedis.ConfigureForAzure, connectionLog);
             break;
 
@@ -39,8 +41,8 @@ try
             var cacheHostName = ReadLine()?.Trim();
             Write("Principal (object) ID of the client resource's system-assigned managed identity ('Username' from the 'Data Access Configuration' blade on the Azure Cache for Redis resource): ");
             var principalId = ReadLine()?.Trim();
-            WriteLine("Connecting with a system-assigned managed identity...");
 
+            WriteLine("Connecting with a system-assigned managed identity...");
             var configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithSystemAssignedManagedIdentityAsync(principalId!);
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
             LogTokenEvents(configurationOptions);
@@ -55,8 +57,8 @@ try
             var managedIdentityId = ReadLine()?.Trim();
             Write("Managed identity Principal (object) ID ('Username' from the 'Data Access Configuration' blade on the Azure Cache for Redis resource): ");
             principalId = ReadLine()?.Trim();
-            WriteLine("Connecting with a user-assigned managed identity...");
 
+            WriteLine("Connecting with a user-assigned managed identity...");
             configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithUserAssignedManagedIdentityAsync(managedIdentityId!, principalId!);
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
             LogTokenEvents(configurationOptions);
@@ -64,7 +66,7 @@ try
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
 
-        case "4": // Service principal
+        case "4": // Service principal secret
             Write("Redis cache host name: ");
             cacheHostName = ReadLine()?.Trim();
             Write("Service principal Application (client) ID: ");
@@ -75,8 +77,8 @@ try
             var tenantId = ReadLine()?.Trim();
             Write("Service principal secret: ");
             var secret = ReadLine()?.Trim();
-            WriteLine("Connecting with a service principal...");
 
+            WriteLine("Connecting with a service principal secret...");
             configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithServicePrincipalAsync(clientId!, principalId!, tenantId!, secret!);
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
             LogTokenEvents(configurationOptions);
@@ -84,13 +86,38 @@ try
             connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
             break;
 
-        case "5": // DefaultAzureCredential 
+        case "5": // Service principal certificate
+            Write("Redis cache host name: ");
+            cacheHostName = ReadLine()?.Trim();
+            Write("Service principal Application (client) ID: ");
+            clientId = ReadLine()?.Trim();
+            Write("Principal (object) ID of the service principal ('Username' from the 'Data Access Configuration' blade on the Azure Cache for Redis resource): ");
+            principalId = ReadLine()?.Trim();
+            Write("Service principal Tenant ID: ");
+            tenantId = ReadLine()?.Trim();
+            Write("Path to certificate file: ");
+            var certFilePath = ReadLine()?.Trim();
+            Write("Certificate file password: ");
+            var certPassword = ReadLine()?.Trim();
+
+            WriteLine("Loading certificate...");
+            var certificate = new X509Certificate2(certFilePath!, certPassword, X509KeyStorageFlags.EphemeralKeySet);
+
+            WriteLine("Connecting with a service principal certificate...");
+            configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithServicePrincipalAsync(clientId!, principalId!, tenantId!, certificate: certificate!);
+            configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
+            LogTokenEvents(configurationOptions);
+
+            connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
+            break;
+
+        case "6": // DefaultAzureCredential 
             Write("Redis cache host name: ");
             cacheHostName = ReadLine()?.Trim();
             Write("'Username' from the 'Data Access Configuration' blade on the Azure Cache for Redis resource): ");
-            string? username = ReadLine()?.Trim();
-            Write("Connecting using TokenCredential...");
+            var username = ReadLine()?.Trim();
 
+            Write("Connecting using TokenCredential...");
             configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithTokenCredentialAsync(username!, new DefaultAzureCredential());
             configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
             LogTokenEvents(configurationOptions);
