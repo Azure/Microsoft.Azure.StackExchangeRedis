@@ -25,7 +25,7 @@ internal interface ICacheIdentityClient
 
 internal class CacheIdentityClient : ICacheIdentityClient
 {
-    private static readonly string[] s_azureCacheForRedisScopes = { "acca5fbb-b7e4-4009-81f1-37e38fd66d78/.default" };
+    private static readonly string[] s_azureCacheForRedisScopes = { "https://redis.azure.com/.default" };
 
     private readonly Func<Task<TokenResult>> _getToken;
 
