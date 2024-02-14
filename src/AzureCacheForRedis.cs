@@ -100,6 +100,32 @@ public static class AzureCacheForRedis
                 PrincipalId = userName,
                 TokenCredential = tokenCredential
             }).ConfigureAwait(false);
+    
+    /// <summary>
+    /// Configures a Redis connection authenticated using a TokenCredential.
+    /// </summary>
+    /// <param name="configurationOptions">The configuration to update.</param>
+    /// <param name="tokenCredential">The TokenCredential to be used.</param>
+    /// <returns></returns>
+    public static async Task<ConfigurationOptions> ConfigureForAzureWithTokenCredentialAsync(this ConfigurationOptions configurationOptions, TokenCredential tokenCredential)
+    {
+        var client = CacheIdentityClient.CreateForTokenCredential(tokenCredential);
+        var token = await client.GetTokenAsync();
+        
+        if(!TokenHelpers.TryGetOidFromToken(token.Token, out var oid))
+        {
+            throw new InvalidOperationException("Token does not contain an OID claim.");
+        }
+        
+        return await ConfigureForAzureAsync(
+                configurationOptions,
+                new AzureCacheOptions
+                {
+                    PrincipalId = oid,
+                    TokenCredential = tokenCredential
+                })
+            .ConfigureAwait(false);
+    }
 
     /// <summary>
     /// Configures a connection to an Azure Cache for Redis using advanced options.

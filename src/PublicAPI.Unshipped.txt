@@ -1,1 +1,2 @@
 ﻿#nullable enable
+static StackExchange.Redis.AzureCacheForRedis.ConfigureForAzureWithTokenCredentialAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, Azure.Core.TokenCredential! tokenCredential) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
