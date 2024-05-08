@@ -51,6 +51,11 @@ public class AzureCacheOptions
     public string? CloudUri;
 
     /// <summary>
+    /// Enables Subject Name + Issuer authentication of certificates (Microsoft internal use only).
+    /// </summary>
+    public bool SendX5C = false;
+
+    /// <summary>
     /// TokenCredential used to authenticate a connection to Redis.
     /// </summary>
     public TokenCredential? TokenCredential;

@@ -1,1 +1,2 @@
 ﻿#nullable enable
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.SendX5C -> bool
