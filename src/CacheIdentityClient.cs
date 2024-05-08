@@ -49,16 +49,16 @@ internal class CacheIdentityClient : ICacheIdentityClient
             .WithClientSecret(secret)
             .Build());
 
-    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, X509Certificate2 certificate, AzureCloudInstance cloud)
+    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, X509Certificate2 certificate, AzureCloudInstance cloud, bool sendX5C)
         => new CacheIdentityClient(ConfidentialClientApplicationBuilder.Create(clientId)
             .WithAuthority(cloud, tenantId)
-            .WithCertificate(certificate)
+            .WithCertificate(certificate, sendX5C)
             .Build());
 
-    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, X509Certificate2 certificate, string cloudUri)
+    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, X509Certificate2 certificate, string cloudUri, bool sendX5C)
         => new CacheIdentityClient(ConfidentialClientApplicationBuilder.Create(clientId)
             .WithAuthority(cloudUri, tenantId)
-            .WithCertificate(certificate)
+            .WithCertificate(certificate, sendX5C)
             .Build());
 
     internal static ICacheIdentityClient CreateForTokenCredential(TokenCredential tokenCredential)

@@ -87,8 +87,8 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
             if (azureCacheOptions.ServicePrincipalCertificate is not null)
             {
                 return azureCacheOptions.CloudUri is null ?
-                    CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId, azureCacheOptions.ServicePrincipalTenantId, azureCacheOptions.ServicePrincipalCertificate, azureCacheOptions.Cloud)
-                    : CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId, azureCacheOptions.ServicePrincipalTenantId, azureCacheOptions.ServicePrincipalCertificate, azureCacheOptions.CloudUri);
+                    CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId, azureCacheOptions.ServicePrincipalTenantId, azureCacheOptions.ServicePrincipalCertificate, azureCacheOptions.Cloud, azureCacheOptions.SendX5C)
+                    : CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId, azureCacheOptions.ServicePrincipalTenantId, azureCacheOptions.ServicePrincipalCertificate, azureCacheOptions.CloudUri, azureCacheOptions.SendX5C);
             }
 
             throw new ArgumentException($"To use a service principal, {nameof(azureCacheOptions.ServicePrincipalSecret)} or {nameof(azureCacheOptions.ServicePrincipalCertificate)} must be specified");
