@@ -1,6 +1,7 @@
 # Release Notes
 
 ## Unreleased
+- Update dependency package versions ([#47 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/47))
 
 ## 2.0.0
 - Fix [#2](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/2), [#25](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/25): Add TokenCredential/DefaultAzureCredential support ([#10 by lsannicolas](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/10))
