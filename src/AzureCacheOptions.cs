@@ -5,6 +5,7 @@ using System;
 using System.Security.Cryptography.X509Certificates;
 using Azure.Core;
 using Microsoft.Identity.Client;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace Microsoft.Azure.StackExchangeRedis;
 
@@ -13,12 +14,6 @@ namespace Microsoft.Azure.StackExchangeRedis;
 /// </summary>
 public class AzureCacheOptions
 {
-    /// <summary>
-    /// Principal (object) ID of a managed identity or a service principal used to authenticate a connection to Redis.
-    /// Required when connecting with a managed identity or service principal.
-    /// </summary>
-    public string? PrincipalId;
-
     /// <summary>
     /// Client ID of a managed identity or a service principal used to authenticate a connection to Redis.
     /// Required when connecting with a user-assigned managed identity or a service principal.
@@ -66,7 +61,9 @@ public class AzureCacheOptions
     public bool ThrowOnTokenRefreshFailure = true;
 
     /// <summary>
-    /// Determines whether the current token should be refreshed, based on its age and lifespan
+    /// Determines whether the current token should be refreshed, based on its age and lifespan.
+    /// The default implementation refreshes the token if it has exceeded 75% of its lifespan.
+    /// Supply a different implementation if you want to refresh the token at a different interval.
     /// </summary>
     public Func<DateTime, DateTime, bool> ShouldTokenBeRefreshed = (DateTime acquired, DateTime expiry) =>
     {
@@ -77,12 +74,43 @@ public class AzureCacheOptions
     };
 
     /// <summary>
+    /// Given an access token, produce the Redis user name to be used for authentication.
+    /// The default implementation extracts the 'oid' claim from the token using Microsoft.IdentityModel.JsonWebTokens.
+    /// Supply a different implementation if you need to use a different approach to determine the user name.
+    /// </summary>
+    public Func<string?, string> GetUserName = (string? token) =>
+    {
+        if (token is null)
+        {
+            throw new ArgumentNullException(nameof(token));
+        }
+
+        var jwtHandler = new JsonWebTokenHandler();
+
+        if (!jwtHandler.CanReadToken(token))
+        {
+            throw new Exception("Invalid token cannot be read");
+        }
+
+        var jwt = jwtHandler.ReadJsonWebToken(token);
+
+        if (jwt.TryGetClaim("oid", out var oid))
+        {
+            return oid.Value;
+        }
+        else
+        {
+            throw new Exception("oid not found in token claims");
+        }
+    };
+
+    /// <summary>
     /// Periodic interval to check token for expiration, acquire new tokens, and re-authenticate connections.
     /// </summary>
     internal TimeSpan TokenHeartbeatInterval = TimeSpan.FromMinutes(5);
 
     /// <summary>
-    /// Number of attempts to acquire a new token.
+    /// Number of attempts to acquire a new token (default is 5).
     /// If none of the attempts succeed, the same number of attempts will be made at the next timer interval.
     /// </summary>
     internal int MaxTokenRefreshAttempts = 5;

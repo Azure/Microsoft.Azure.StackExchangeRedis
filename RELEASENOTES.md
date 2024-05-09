@@ -1,6 +1,7 @@
 # Release Notes
 
 ## Unreleased
+- Fix [#17](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/17): Eliminate the need to specify a principalId/objectId/userName ([#48 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/48))
 - Add support for Subject Name + Issuer (SNI) certificate authentication ([#46 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/46))
 - Update dependency package versions ([#47 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/47))
 

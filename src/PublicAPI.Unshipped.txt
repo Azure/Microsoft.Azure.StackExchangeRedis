@@ -1,2 +1,3 @@
 ﻿#nullable enable
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.SendX5C -> bool
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.GetUserName -> System.Func<string?, string!>!
