@@ -16,10 +16,9 @@ namespace Microsoft.Azure.StackExchangeRedis;
 internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, IAzureCacheTokenEvents
 {
     internal ICacheIdentityClient IdentityClient; // internal so unit tests can inject a fake
-    private readonly System.Timers.Timer _tokenRefreshTimer = new();
 
+    private readonly System.Timers.Timer _tokenRefreshTimer = new();
     private readonly AzureCacheOptions _azureCacheOptions;
-    private readonly string _userName;
     private string? _token;
     private DateTime _tokenAcquiredTime = DateTime.MinValue;
     private DateTime _tokenExpiry = DateTime.UtcNow; // Setting a valid DateTime value to allow us to subtract a leeway
@@ -33,17 +32,6 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     {
         _azureCacheOptions = azureCacheOptions;
 
-        if (azureCacheOptions.PrincipalId is null)
-        {
-            throw new ArgumentException($"{nameof(azureCacheOptions.PrincipalId)} of a managed identity or service principal must be specified", nameof(azureCacheOptions.PrincipalId));
-        }
-
-        if (azureCacheOptions.TokenCredential is not null && azureCacheOptions.PrincipalId is null)
-        {
-            throw new ArgumentException($"A {nameof(azureCacheOptions.PrincipalId)} must be specified to use {nameof(azureCacheOptions.TokenCredential)}.", azureCacheOptions.PrincipalId);
-        }
-
-        _userName = azureCacheOptions.PrincipalId;
         IdentityClient = GetIdentityClient(azureCacheOptions);
 
         _tokenRefreshTimer.Interval = azureCacheOptions.TokenHeartbeatInterval.TotalMilliseconds;
@@ -67,24 +55,27 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     /// Instantiates a <see cref="CacheIdentityClient"/> configured for a specific authentication type, depending on the properties supplied in <paramref name="azureCacheOptions"/>
     /// </summary>
     /// <param name="azureCacheOptions">Options including details of the managed identity or service principal used for authentication</param>
-    private static ICacheIdentityClient GetIdentityClient(AzureCacheOptions azureCacheOptions)
+    private ICacheIdentityClient GetIdentityClient(AzureCacheOptions azureCacheOptions)
     {
-        if (azureCacheOptions.ServicePrincipalTenantId is not null || azureCacheOptions.ServicePrincipalSecret is not null || azureCacheOptions.ServicePrincipalCertificate is not null)
+        if (azureCacheOptions.TokenCredential is not null) // DefaultAzureCredential (or other TokenCredential)
         {
-            // Service principal details were supplied, so authenticate using a service principal
-            if (azureCacheOptions.ClientId is null || azureCacheOptions.PrincipalId is null || azureCacheOptions.ServicePrincipalTenantId is null)
+            return CacheIdentityClient.CreateForTokenCredential(azureCacheOptions.TokenCredential);
+        }
+        else if (azureCacheOptions.ServicePrincipalTenantId is not null || azureCacheOptions.ServicePrincipalSecret is not null || azureCacheOptions.ServicePrincipalCertificate is not null) // Service Principal
+        {
+            if (azureCacheOptions.ClientId is null || azureCacheOptions.ServicePrincipalTenantId is null)
             {
-                throw new ArgumentException($"To use a service principal, {nameof(azureCacheOptions.ClientId)}, {nameof(azureCacheOptions.PrincipalId)}, and {nameof(azureCacheOptions.ServicePrincipalTenantId)} must all be specified");
+                throw new ArgumentException($"To use a service principal, {nameof(azureCacheOptions.ClientId)} and {nameof(azureCacheOptions.ServicePrincipalTenantId)} must be specified");
             }
 
-            if (azureCacheOptions.ServicePrincipalSecret is not null)
+            if (azureCacheOptions.ServicePrincipalSecret is not null) // Service Principal with secret
             {
                 return azureCacheOptions.CloudUri is null ?
                     CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId, azureCacheOptions.ServicePrincipalTenantId, azureCacheOptions.ServicePrincipalSecret, azureCacheOptions.Cloud)
                     : CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId, azureCacheOptions.ServicePrincipalTenantId, azureCacheOptions.ServicePrincipalSecret, azureCacheOptions.CloudUri);
             }
 
-            if (azureCacheOptions.ServicePrincipalCertificate is not null)
+            if (azureCacheOptions.ServicePrincipalCertificate is not null) // Service Principal with certificate
             {
                 return azureCacheOptions.CloudUri is null ?
                     CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId, azureCacheOptions.ServicePrincipalTenantId, azureCacheOptions.ServicePrincipalCertificate, azureCacheOptions.Cloud, azureCacheOptions.SendX5C)
@@ -93,16 +84,11 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
             throw new ArgumentException($"To use a service principal, {nameof(azureCacheOptions.ServicePrincipalSecret)} or {nameof(azureCacheOptions.ServicePrincipalCertificate)} must be specified");
         }
-        else if (azureCacheOptions.TokenCredential is not null) // A TokenCredential is supplied, authenticate using TokenCredential
+        else // Managed identity
         {
-            return CacheIdentityClient.CreateForTokenCredential(azureCacheOptions.TokenCredential);
-        }
-        else // No service principal details supplied
-        {
-            // Authenticate using a managed identity
             return azureCacheOptions.ClientId is not null ?
-                CacheIdentityClient.CreateForUserAssignedManagedIdentity(azureCacheOptions.ClientId) // A Client ID was supplied, so authenticate using a user-assigned managed identity
-                : CacheIdentityClient.CreateForSystemAssignedManagedIdentity(); // No Client ID was supplied, so authenticate with a system-assigned managed identity
+                CacheIdentityClient.CreateForUserAssignedManagedIdentity(azureCacheOptions.ClientId) // User-assigned managed identity
+                : CacheIdentityClient.CreateForSystemAssignedManagedIdentity(); // System-assigned managed identity
         }
     }
 
@@ -111,9 +97,6 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     /// </summary>
     /// <returns>True for all cases.</returns>
     public override bool GetDefaultSsl(EndPointCollection _) => true;
-
-    /// <inheritdoc/>
-    public override string User => _userName;
 
     /// <inheritdoc/>
     public override string? Password => _token;
@@ -192,6 +175,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
             {
                 TokenResult tokenResult = await IdentityClient.GetTokenAsync().ConfigureAwait(false);
                 var leeway = TimeSpan.FromSeconds(30); // Sometimes the updated token may actually have an expiry a few seconds shorter than the original
+
                 if (tokenResult is not null && tokenResult.ExpiresOn.UtcDateTime >= _tokenExpiry.Subtract(leeway))
                 {
                     _token = tokenResult.Token;
@@ -254,7 +238,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                                 // NOTE that this will only re-authenticate interactive connections. Subscription connections (where the SUBSCRIBE command has been run) cannot be re-authenticated. 
                                 // When a subscription connection's token expires, the server will close it and StackExchange.Redis will immediately restore the connection using the current token.
                                 // This may result in brief gaps where subscription connections are not available and published messages aren't received by clients that are in the process of recovering their connection. 
-                                await server.ExecuteAsync("AUTH", User, Password!).ConfigureAwait(false);
+                                await server.ExecuteAsync("AUTH", User!, Password!).ConfigureAwait(false);
                                 ConnectionReauthenticated?.Invoke(this, server.EndPoint.ToString()!);
                             }
                             catch (Exception ex)

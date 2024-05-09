@@ -25,25 +25,24 @@ var configurationOptions = ConfigurationOptions.Parse($"{cacheHostName}:6380");
 
 ```csharp
 // DefaultAzureCredential
-await configurationOptions.ConfigureForAzureWithTokenCredentialAsync(userName, new DefaultAzureCredential());
+await configurationOptions.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
 
 // User-assigned managed identity
-await configurationOptions.ConfigureForAzureWithUserAssignedManagedIdentityAsync(managedIdentityClientId, principalId);
+await configurationOptions.ConfigureForAzureWithUserAssignedManagedIdentityAsync(managedIdentityClientId);
 
 // System-assigned managed identity
-await configurationOptions.ConfigureForAzureWithSystemAssignedManagedIdentityAsync(principalId);
+await configurationOptions.ConfigureForAzureWithSystemAssignedManagedIdentityAsync();
 
 // Service principal secret
-await configurationOptions.ConfigureForAzureWithServicePrincipalAsync(clientId, principalId, tenantId, secret);
+await configurationOptions.ConfigureForAzureWithServicePrincipalAsync(clientId, tenantId, secret);
 
 // Service principal certificate
-await configurationOptions.ConfigureForAzureWithServicePrincipalAsync(clientId, principalId, tenantId, certificate);
+await configurationOptions.ConfigureForAzureWithServicePrincipalAsync(clientId, tenantId, certificate);
 
 // Service principal certificate with Subject Name + Issuer (SNI) authentication (Microsoft internal use only)
 await configurationOptions.ConfigureForAzureAsync(new AzureCacheOptions
 {
     ClientId = clientId,
-    PrincipalId = principalId,
     ServicePrincipalTenantId = tenantId,
     ServicePrincipalCertificate = certificate,
     SendX5C = true // Enables Subject Name + Issuer authentication

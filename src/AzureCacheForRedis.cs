@@ -27,16 +27,12 @@ public static class AzureCacheForRedis
     /// Throws on failure by default (configurable in the <see cref="ConfigureForAzureAsync"/> method).
     /// </summary>
     /// <param name="configurationOptions">The configuration to update.</param>
-    /// <param name="principalId">Principal (object) ID of the client resource's system-assigned managed identity.</param>
     /// <exception cref="MsalServiceException">When the token source is not supported or identified incorrectly.</exception>
     /// <exception cref="HttpRequestException">Unable to contact the identity service to acquire a token.</exception>
-    public static async Task<ConfigurationOptions> ConfigureForAzureWithSystemAssignedManagedIdentityAsync(this ConfigurationOptions configurationOptions, string principalId)
+    public static async Task<ConfigurationOptions> ConfigureForAzureWithSystemAssignedManagedIdentityAsync(this ConfigurationOptions configurationOptions)
         => await ConfigureForAzureAsync(
             configurationOptions,
-            new AzureCacheOptions()
-            {
-                PrincipalId = principalId,
-            }).ConfigureAwait(false);
+            new AzureCacheOptions()).ConfigureAwait(false);
 
     /// <summary>
     /// Configures a Redis connection authenticated using a user-assigned managed identity.
@@ -44,16 +40,14 @@ public static class AzureCacheForRedis
     /// </summary>
     /// <param name="configurationOptions">The configuration to update.</param>
     /// <param name="clientId">Client ID or resource ID of the user-assigned managed identity.</param>
-    /// <param name="principalId">Principal (object) ID of the user-assigned managed identity.</param>
     /// <exception cref="MsalServiceException">When the token source is not supported or identified incorrectly.</exception>
     /// <exception cref="HttpRequestException">Unable to contact the identity service to acquire a token.</exception>
-    public static async Task<ConfigurationOptions> ConfigureForAzureWithUserAssignedManagedIdentityAsync(this ConfigurationOptions configurationOptions, string clientId, string principalId)
+    public static async Task<ConfigurationOptions> ConfigureForAzureWithUserAssignedManagedIdentityAsync(this ConfigurationOptions configurationOptions, string clientId)
         => await ConfigureForAzureAsync(
             configurationOptions,
             new AzureCacheOptions()
             {
                 ClientId = clientId,
-                PrincipalId = principalId,
             }).ConfigureAwait(false);
 
     /// <summary>
@@ -63,7 +57,6 @@ public static class AzureCacheForRedis
     /// </summary>
     /// <param name="configurationOptions">The configuration to update.</param>
     /// <param name="clientId">Client ID of the service principal.</param>
-    /// <param name="principalId">Principal (object) ID of the service principal.</param>
     /// <param name="tenantId">Tenant ID of the service principal.</param>
     /// <param name="secret">Service principal secret. Either <paramref name="secret"/> or <paramref name="certificate"/> must be provided</param>
     /// <param name="certificate">Service principal certificate. Either <paramref name="certificate"/> or <paramref name="secret"/> must be provided.</param>
@@ -71,13 +64,12 @@ public static class AzureCacheForRedis
     /// <param name="cloudUri">Optional. Provide a value to use an Azure cloud not included in <see cref="AzureCloudInstance"/>. URI format will be similar to <c>https://login.microsoftonline.com)</c></param>
     /// <exception cref="MsalServiceException">When the token source is not supported or identified incorrectly.</exception>
     /// <exception cref="HttpRequestException">Unable to contact the identity service to acquire a token.</exception>
-    public static async Task<ConfigurationOptions> ConfigureForAzureWithServicePrincipalAsync(this ConfigurationOptions configurationOptions, string clientId, string principalId, string tenantId, string? secret = null, X509Certificate2? certificate = null, AzureCloudInstance cloud = AzureCloudInstance.AzurePublic, string? cloudUri = null)
+    public static async Task<ConfigurationOptions> ConfigureForAzureWithServicePrincipalAsync(this ConfigurationOptions configurationOptions, string clientId, string tenantId, string? secret = null, X509Certificate2? certificate = null, AzureCloudInstance cloud = AzureCloudInstance.AzurePublic, string? cloudUri = null)
         => await ConfigureForAzureAsync(
             configurationOptions,
             new AzureCacheOptions()
             {
                 ClientId = clientId,
-                PrincipalId = principalId,
                 ServicePrincipalTenantId = tenantId,
                 ServicePrincipalSecret = secret,
                 ServicePrincipalCertificate = certificate,
@@ -89,15 +81,12 @@ public static class AzureCacheForRedis
     /// Configures a Redis connection authenticated using a TokenCredential.
     /// </summary>
     /// <param name="configurationOptions">The configuration to update.</param>
-    /// <param name="userName">The user to be used for authentication.</param>
     /// <param name="tokenCredential">The TokenCredential to be used.</param>
-    /// <returns></returns>
-    public static async Task<ConfigurationOptions> ConfigureForAzureWithTokenCredentialAsync(this ConfigurationOptions configurationOptions, string userName, TokenCredential tokenCredential)
+    public static async Task<ConfigurationOptions> ConfigureForAzureWithTokenCredentialAsync(this ConfigurationOptions configurationOptions, TokenCredential tokenCredential)
         => await ConfigureForAzureAsync(
             configurationOptions,
             new AzureCacheOptions()
             {
-                PrincipalId = userName,
                 TokenCredential = tokenCredential
             }).ConfigureAwait(false);
 
@@ -114,9 +103,17 @@ public static class AzureCacheForRedis
     {
         var optionsProvider = new AzureCacheOptionsProviderWithToken(azureCacheOptions);
 
-        await optionsProvider.AcquireTokenAsync(azureCacheOptions.ThrowOnTokenRefreshFailure).ConfigureAwait(false);
+        try
+        {
+            await optionsProvider.AcquireTokenAsync(azureCacheOptions.ThrowOnTokenRefreshFailure).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to acquire token", ex);
+        }
 
         configurationOptions.Defaults = optionsProvider;
+        configurationOptions.User ??= azureCacheOptions.GetUserName(configurationOptions.Password);
 
         return configurationOptions;
     }
