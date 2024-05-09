@@ -14,6 +14,8 @@ Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.AzureCacheOptions() -> void
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ClientId -> string?
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.Cloud -> Microsoft.Identity.Client.AzureCloudInstance
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.CloudUri -> string?
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.GetUserName -> System.Func<string?, string!>!
+Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.SendX5C -> bool
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ServicePrincipalCertificate -> System.Security.Cryptography.X509Certificates.X509Certificate2?
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ServicePrincipalSecret -> string?
 Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.ServicePrincipalTenantId -> string?
