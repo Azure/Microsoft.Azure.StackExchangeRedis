@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 3.0.1
+- Fix [#51](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/51): Preserve user name for reauthentication ([#52 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/52))
+
 ## 3.0.0
 - Fix [#17](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/17): Eliminate the need to specify a principalId/objectId/userName ([#48 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/48))
 - Add support for Subject Name + Issuer (SNI) certificate authentication ([#46 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/46))
