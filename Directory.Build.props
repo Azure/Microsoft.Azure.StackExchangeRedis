@@ -1,7 +1,6 @@
 <Project>
-
   <PropertyGroup>
-    <Version>3.0.0</Version>
+    <Version>3.1.0</Version>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <PackageId>$(AssemblyName)</PackageId>
@@ -10,27 +9,29 @@
     <PackageReleaseNotes>https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/releases</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
     <LangVersion>11</LangVersion>
     <Nullable>enable</Nullable>
     <NullableContextOptions>enable</NullableContextOptions>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/</RepositoryUrl>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <RepositoryUrl>https://github.com/StackExchange/StackExchange.Redis/</RepositoryUrl>
+
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
-    <IncludeSymbols>false</IncludeSymbols>
     <DefaultLanguage>en-US</DefaultLanguage>
+    <IncludeSymbols>false</IncludeSymbols>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IsPackable>false</IsPackable>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
-
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <Deterministic>true</Deterministic>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
   <ItemGroup Condition="'$(Configuration)' == 'Release' and '$(SourceRoot)'==''">
     <SourceRoot Include="$(MSBuildThisFileDirectory)/"/>
   </ItemGroup>
-
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="all" />
   </ItemGroup>
-
 </Project>

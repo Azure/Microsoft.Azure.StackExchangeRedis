@@ -2,8 +2,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
-    <Version>3.0.0</Version>
-    <Authors>Microsoft</Authors>
     <Description>Extension package for StackExchange.Redis to be used with the Azure Cache for Redis service</Description>
     <AssemblyName>Microsoft.Azure.StackExchangeRedis</AssemblyName>
     <AssemblyTitle>Microsoft.Azure.StackExchangeRedis</AssemblyTitle>
@@ -22,10 +20,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.11.3" />
-    <PackageReference Include="Microsoft.Identity.Client" Version="4.60.3" />
-    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="7.5.1" />
-    <PackageReference Include="StackExchange.Redis" Version="2.7.33" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Microsoft.Identity.Client" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+    <PackageReference Include="StackExchange.Redis" />
   </ItemGroup>
 
   <ItemGroup Condition="$(CDP_BUILD_TYPE)==Official">
