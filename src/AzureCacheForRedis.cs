@@ -113,7 +113,7 @@ public static class AzureCacheForRedis
         }
 
         configurationOptions.Defaults = optionsProvider;
-        configurationOptions.User ??= azureCacheOptions.GetUserName(configurationOptions.Password);
+        optionsProvider._user = configurationOptions.User ?? azureCacheOptions.GetUserName(configurationOptions.Password);
 
         return configurationOptions;
     }

@@ -19,6 +19,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
     private readonly System.Timers.Timer _tokenRefreshTimer = new();
     private readonly AzureCacheOptions _azureCacheOptions;
+    internal string? _user;
     private string? _token;
     private DateTime _tokenAcquiredTime = DateTime.MinValue;
     private DateTime _tokenExpiry = DateTime.UtcNow; // Setting a valid DateTime value to allow us to subtract a leeway
@@ -97,6 +98,9 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     /// </summary>
     /// <returns>True for all cases.</returns>
     public override bool GetDefaultSsl(EndPointCollection _) => true;
+
+    /// <inheritdoc/>
+    public override string? User => _user;
 
     /// <inheritdoc/>
     public override string? Password => _token;
