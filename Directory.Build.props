@@ -14,7 +14,7 @@
     <Nullable>enable</Nullable>
     <NullableContextOptions>enable</NullableContextOptions>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/StackExchange/StackExchange.Redis/</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/</RepositoryUrl>
 
     <DebugSymbols>true</DebugSymbols>
     <DebugType>embedded</DebugType>
