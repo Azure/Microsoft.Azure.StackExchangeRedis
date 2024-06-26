@@ -5,7 +5,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <PackageId>$(AssemblyName)</PackageId>
     <Features>strict</Features>
-    <Authors>Microsoft, Inc.</Authors>
+    <Authors>Microsoft</Authors>
     <PackageReleaseNotes>https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/releases</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
