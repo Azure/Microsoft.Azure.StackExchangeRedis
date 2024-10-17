@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 3.2.0
+- Add support for overriding the Redis scope/audience to address ([#60](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/60)) ([#67 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/67))
+- Update to latest .NET SDK and dependencies ([#66 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/66))
+
 ## 3.1.0
 - Fix [#51](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/51): Preserve user name for reauthentication ([#52 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/52))
 - Fix [#39](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/39): Enable Source Link and Central Package Management ([#54 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/54))
