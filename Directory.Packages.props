@@ -2,10 +2,9 @@
   <ItemGroup>
     <!-- Packages we depend on for Microsoft.Azure.StackExchangeRedis, upgrades can create binding redirect pain! -->
     <PackageVersion Include="StackExchange.Redis" Version="2.8.16" />
-    <PackageVersion Include="Azure.Identity" Version="1.13.0" />
-    <PackageVersion Include="Microsoft.Identity.Client" Version="4.65.0" />
+    <PackageVersion Include="Azure.Identity" Version="1.13.1" />
+    <PackageVersion Include="Microsoft.Identity.Client" Version="4.66.1" />
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.1.2" />
-
     <!-- Packages only used in the solution, upgrade at will -->
     <PackageVersion Include="FakeItEasy" Version="8.3.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="3.3.4" />

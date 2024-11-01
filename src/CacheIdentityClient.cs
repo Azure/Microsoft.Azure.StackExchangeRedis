@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -25,57 +24,59 @@ internal interface ICacheIdentityClient
 
 internal class CacheIdentityClient : ICacheIdentityClient
 {
-    private static readonly string[] s_azureCacheForRedisScopes = { "https://redis.azure.com/.default" };
-
     private readonly Func<Task<TokenResult>> _getToken;
 
-    internal static ICacheIdentityClient CreateForSystemAssignedManagedIdentity()
-        => new CacheIdentityClient(ManagedIdentityApplicationBuilder.Create(ManagedIdentityId.SystemAssigned)
-            .Build());
+    private CacheIdentityClient(Func<ValueTask<AccessToken>> getToken)
+        => _getToken = async () => new TokenResult(await getToken.Invoke().ConfigureAwait(false));
 
-    internal static ICacheIdentityClient CreateForUserAssignedManagedIdentity(string id)
-        => new CacheIdentityClient(ManagedIdentityApplicationBuilder.Create(Guid.TryParse(id, out _) ? ManagedIdentityId.WithUserAssignedClientId(id) : ManagedIdentityId.WithUserAssignedResourceId(id))
-            .Build());
+    private CacheIdentityClient(Func<Task<AuthenticationResult>> getToken)
+        => _getToken = async () => new TokenResult(await getToken.Invoke().ConfigureAwait(false));
 
-    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, string secret, AzureCloudInstance cloud)
-        => new CacheIdentityClient(ConfidentialClientApplicationBuilder.Create(clientId)
-            .WithAuthority(cloud, tenantId)
-            .WithClientSecret(secret)
-            .Build());
+    internal static ICacheIdentityClient CreateForManagedIdentity(AzureCacheOptions options)
+    {
+        var clientApp = ManagedIdentityApplicationBuilder.Create(
+                  options.ClientId is null ?
+                      ManagedIdentityId.SystemAssigned
+                      : Guid.TryParse(options.ClientId, out _) ?
+                          ManagedIdentityId.WithUserAssignedClientId(options.ClientId)
+                          : ManagedIdentityId.WithUserAssignedResourceId(options.ClientId))
+                  .Build();
 
-    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, string secret, string cloudUri)
-        => new CacheIdentityClient(ConfidentialClientApplicationBuilder.Create(clientId)
-            .WithAuthority(cloudUri, tenantId)
-            .WithClientSecret(secret)
-            .Build());
+        return new CacheIdentityClient(getToken: () => clientApp.AcquireTokenForManagedIdentity(options.Scope).ExecuteAsync());
+    }
 
-    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, X509Certificate2 certificate, AzureCloudInstance cloud, bool sendX5C)
-        => new CacheIdentityClient(ConfidentialClientApplicationBuilder.Create(clientId)
-            .WithAuthority(cloud, tenantId)
-            .WithCertificate(certificate, sendX5C)
-            .Build());
+    internal static ICacheIdentityClient CreateForServicePrincipal(AzureCacheOptions options)
+    {
+        var clientApp = ConfidentialClientApplicationBuilder.Create(options.ClientId)
+            .WithCloudAuthority(options)
+            .WithCredentials(options)
+            .Build();
 
-    internal static ICacheIdentityClient CreateForServicePrincipal(string clientId, string tenantId, X509Certificate2 certificate, string cloudUri, bool sendX5C)
-        => new CacheIdentityClient(ConfidentialClientApplicationBuilder.Create(clientId)
-            .WithAuthority(cloudUri, tenantId)
-            .WithCertificate(certificate, sendX5C)
-            .Build());
+        return new CacheIdentityClient(getToken: () => clientApp.AcquireTokenForClient(new[] { options.Scope }).ExecuteAsync());
+    }
 
-    internal static ICacheIdentityClient CreateForTokenCredential(TokenCredential tokenCredential)
-        => new CacheIdentityClient(tokenCredential);
+    internal static ICacheIdentityClient CreateForTokenCredential(TokenCredential tokenCredential, string scope)
+    {
+        var tokenRequestContext = new TokenRequestContext(new[] { scope });
 
-    private CacheIdentityClient(IManagedIdentityApplication managedIdentityApplication)
-        => _getToken = async () => new TokenResult(await managedIdentityApplication.AcquireTokenForManagedIdentity(s_azureCacheForRedisScopes[0])
-            .ExecuteAsync().ConfigureAwait(false));
+        return new CacheIdentityClient(getToken: () => tokenCredential.GetTokenAsync(tokenRequestContext, CancellationToken.None));
+    }
 
-    private CacheIdentityClient(IConfidentialClientApplication confidentialClientApplication)
-        => _getToken = async () => new TokenResult(await confidentialClientApplication.AcquireTokenForClient(s_azureCacheForRedisScopes)
-            .ExecuteAsync().ConfigureAwait(false));
-
-    private CacheIdentityClient(TokenCredential tokenCredential)
-        => _getToken = async () => new TokenResult(await tokenCredential.GetTokenAsync(new TokenRequestContext(s_azureCacheForRedisScopes), CancellationToken.None));
-
-    public async Task<TokenResult> GetTokenAsync()
+    async Task<TokenResult> ICacheIdentityClient.GetTokenAsync()
         => await _getToken.Invoke().ConfigureAwait(false);
+
+}
+
+internal static class ConfidentialClientApplicationBuilderExtensions
+{
+    internal static ConfidentialClientApplicationBuilder WithCloudAuthority(this ConfidentialClientApplicationBuilder builder, AzureCacheOptions options)
+        => options.CloudUri is null ?
+            builder.WithAuthority(options.Cloud, options.ServicePrincipalTenantId)
+            : builder.WithAuthority(options.CloudUri, options.ServicePrincipalTenantId);
+
+    internal static ConfidentialClientApplicationBuilder WithCredentials(this ConfidentialClientApplicationBuilder builder, AzureCacheOptions options)
+        => options.ServicePrincipalCertificate is null ?
+            builder.WithClientSecret(options.ServicePrincipalSecret)
+            : builder.WithCertificate(options.ServicePrincipalCertificate, options.SendX5C);
 
 }

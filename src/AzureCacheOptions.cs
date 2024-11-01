@@ -46,6 +46,11 @@ public class AzureCacheOptions
     public string? CloudUri;
 
     /// <summary>
+    /// Scope identifier for the type of Redis resource. To connect to an Azure Redis resource, leave this as the default "https://redis.azure.com/.default"
+    /// </summary>
+    public string Scope = "https://redis.azure.com/.default";
+
+    /// <summary>
     /// Enables Subject Name + Issuer authentication of certificates (Microsoft internal use only).
     /// </summary>
     public bool SendX5C = false;

@@ -60,7 +60,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     {
         if (azureCacheOptions.TokenCredential is not null) // DefaultAzureCredential (or other TokenCredential)
         {
-            return CacheIdentityClient.CreateForTokenCredential(azureCacheOptions.TokenCredential);
+            return CacheIdentityClient.CreateForTokenCredential(azureCacheOptions.TokenCredential, azureCacheOptions.Scope);
         }
         else if (azureCacheOptions.ServicePrincipalTenantId is not null || azureCacheOptions.ServicePrincipalSecret is not null || azureCacheOptions.ServicePrincipalCertificate is not null) // Service Principal
         {
@@ -69,27 +69,16 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                 throw new ArgumentException($"To use a service principal, {nameof(azureCacheOptions.ClientId)} and {nameof(azureCacheOptions.ServicePrincipalTenantId)} must be specified");
             }
 
-            if (azureCacheOptions.ServicePrincipalSecret is not null) // Service Principal with secret
+            if (azureCacheOptions.ServicePrincipalSecret is null && azureCacheOptions.ServicePrincipalCertificate is null)
             {
-                return azureCacheOptions.CloudUri is null ?
-                    CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId, azureCacheOptions.ServicePrincipalTenantId, azureCacheOptions.ServicePrincipalSecret, azureCacheOptions.Cloud)
-                    : CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId, azureCacheOptions.ServicePrincipalTenantId, azureCacheOptions.ServicePrincipalSecret, azureCacheOptions.CloudUri);
+                throw new ArgumentException($"To use a service principal, {nameof(azureCacheOptions.ServicePrincipalSecret)} or {nameof(azureCacheOptions.ServicePrincipalCertificate)} must be specified");
             }
 
-            if (azureCacheOptions.ServicePrincipalCertificate is not null) // Service Principal with certificate
-            {
-                return azureCacheOptions.CloudUri is null ?
-                    CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId, azureCacheOptions.ServicePrincipalTenantId, azureCacheOptions.ServicePrincipalCertificate, azureCacheOptions.Cloud, azureCacheOptions.SendX5C)
-                    : CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions.ClientId, azureCacheOptions.ServicePrincipalTenantId, azureCacheOptions.ServicePrincipalCertificate, azureCacheOptions.CloudUri, azureCacheOptions.SendX5C);
-            }
-
-            throw new ArgumentException($"To use a service principal, {nameof(azureCacheOptions.ServicePrincipalSecret)} or {nameof(azureCacheOptions.ServicePrincipalCertificate)} must be specified");
+            return CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions);
         }
         else // Managed identity
         {
-            return azureCacheOptions.ClientId is not null ?
-                CacheIdentityClient.CreateForUserAssignedManagedIdentity(azureCacheOptions.ClientId) // User-assigned managed identity
-                : CacheIdentityClient.CreateForSystemAssignedManagedIdentity(); // System-assigned managed identity
+            return CacheIdentityClient.CreateForManagedIdentity(azureCacheOptions);
         }
     }
 
