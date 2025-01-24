@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 3.2.1
+- Update dependency package versions to get a fix for a vulnerability (see https://github.com/dotnet/announcements/issues/329) ([#73 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/73))
+- Minor improvements to sample app logging and comments ([#72 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/72))
+
 ## 3.2.0
 - Add support for overriding the Redis scope/audience to address ([#60](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/60)) ([#67 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/67))
 - Update to latest .NET SDK and dependencies ([#66 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/66))
