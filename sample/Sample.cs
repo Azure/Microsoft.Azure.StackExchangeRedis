@@ -167,8 +167,11 @@ finally
     WriteLine(connectionLog);
 }
 
-// This loop will execute commands on the Redis cache every five seconds indefinitely. 
-// Let it run for longer than a token lifespan (e.g. 24 hours) to see how the connection remains functional even after the initial token has expired. 
+LogConnectionEvents(connectionMultiplexer);
+
+// This loop will execute commands on the Redis cache every 2 minutes indefinitely. 
+// Let it run for longer than a token lifespan (1-24 hours depending on Entra tenant configuration)
+// to see how the connection remains functional even after the initial token has expired. 
 var database = connectionMultiplexer?.GetDatabase();
 while (true)
 {
@@ -193,11 +196,19 @@ static void LogTokenEvents(ConfigurationOptions configurationOptions)
 {
     if (configurationOptions.Defaults is IAzureCacheTokenEvents tokenEvents)
     {
-        tokenEvents.TokenRefreshed += (sender, tokenResult) => Log($"Token refreshed. New token will expire at {tokenResult.ExpiresOn}");
+        tokenEvents.TokenRefreshed += (sender, tokenResult) => Log($"Token refreshed. New token will expire at {tokenResult.ExpiresOn:s}");
         tokenEvents.TokenRefreshFailed += (sender, args) => Log($"Token refresh failed for token expiring at {args.Expiry}: {args.Exception}");
         tokenEvents.ConnectionReauthenticated += (sender, endpoint) => Log($"Re-authenticated connection to '{endpoint}'");
         tokenEvents.ConnectionReauthenticationFailed += (sender, args) => Log($"Re-authentication of connection to '{args.Endpoint}' failed: {args.Exception}");
     }
+}
+
+static void LogConnectionEvents(ConnectionMultiplexer connectionMultiplexer)
+{
+    connectionMultiplexer.ConnectionFailed += (sender, args) => Log($"Connection failed: {args.Exception}");
+    connectionMultiplexer.ConnectionRestored += (sender, args) => Log($"Connection restored to '{args.EndPoint}'");
+    connectionMultiplexer.ErrorMessage += (sender, args) => Log($"Error: {args.Message}");
+    connectionMultiplexer.InternalError += (sender, args) => Log($"Internal error: {args.Exception}");
 }
 
 static void Log(string message)
