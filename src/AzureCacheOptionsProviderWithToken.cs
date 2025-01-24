@@ -236,7 +236,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                             }
                             catch (Exception ex)
                             {
-                                // No need to retry. When the connection is restored it will be authenticated with the ConfigurationOptions.Password which has been updated to the new token
+                                // No need to retry. When the connection is restored it will be authenticated with the AzureCacheOptionsProviderWithToken.Password which has been updated to the new token
                                 ConnectionReauthenticationFailed?.Invoke(this, new(ex, server.EndPoint.ToString()!));
                                 allSucceeded = false;
                             }
