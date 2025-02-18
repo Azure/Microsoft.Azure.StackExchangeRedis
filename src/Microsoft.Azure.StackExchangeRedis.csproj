@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net8</TargetFrameworks>
     <Description>Extension package for StackExchange.Redis to be used with the Azure Cache for Redis service</Description>
     <AssemblyName>Microsoft.Azure.StackExchangeRedis</AssemblyName>
     <AssemblyTitle>Microsoft.Azure.StackExchangeRedis</AssemblyTitle>
