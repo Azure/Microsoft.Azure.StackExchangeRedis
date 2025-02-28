@@ -141,6 +141,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         {
             if (_tokenAcquiredTime == DateTime.MinValue // Initial token has not yet been acquired
                 || (_tokenExpiry - _tokenAcquiredTime) <= TimeSpan.Zero // Current expiry is not valid
+                || (_tokenExpiry - DateTime.UtcNow) < (_azureCacheOptions.TokenHeartbeatInterval + _azureCacheOptions.TokenHeartbeatInterval) // Within two heartbeats of expiration
                 || _azureCacheOptions.ShouldTokenBeRefreshed(_tokenAcquiredTime, _tokenExpiry)) // Token is due for refresh
             {
                 await AcquireTokenAsync(throwOnFailure).ConfigureAwait(false);
