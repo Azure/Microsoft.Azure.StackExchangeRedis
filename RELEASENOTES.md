@@ -4,6 +4,7 @@
 
 ## 3.2.2
 - Refresh token within two heartbeats of expiration even if less than 75% of its lifetime has passed (see https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/70)([commit c687907 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/commit/c687907c520d80c609631a88ef19c0d9722b2284))
+- Update dependency package versions ([#81 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/81))
 
 ## 3.2.1
 - Update dependency package versions to get a fix for a vulnerability (see https://github.com/dotnet/announcements/issues/329) ([#73 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/73))
