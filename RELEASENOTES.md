@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-## 3.2.2
-- Refresh token within two heartbeats of expiration even if less than 75% of its lifetime has passed (see https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/70)([commit c687907 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/commit/c687907c520d80c609631a88ef19c0d9722b2284))
+## 3.3.0
+- Fix [#69](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/69), [#70](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/70): Improve token refresh resilience and add logging ([#82 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/82))
 - Update dependency package versions ([#81 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/81))
 
 ## 3.2.1
@@ -11,11 +11,11 @@
 - Minor improvements to sample app logging and comments ([#72 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/72))
 
 ## 3.2.0
-- Add support for overriding the Redis scope/audience to address ([#60](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/60)) ([#67 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/67))
+- Resolve [#60](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/60): Add support for overriding the Redis scope/audience to address ([#67 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/67))
 - Update to latest .NET SDK and dependencies ([#66 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/66))
 
 ## 3.1.0
-- Fix [#51](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/51): Preserve user name for reauthentication ([#52 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/52))
+- Fix [#51](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/51): Preserve user name for re-authentication ([#52 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/52))
 - Fix [#39](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/39): Enable Source Link and Central Package Management ([#54 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/54))
 
 ## 3.0.0
