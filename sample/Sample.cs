@@ -4,12 +4,53 @@
 using System.Security.Cryptography.X509Certificates;
 using Azure.Identity;
 using Microsoft.Azure.StackExchangeRedis;
+using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
-using static System.Console;
 
-WriteLine(@"
-This sample shows how to connect to an Azure Redis cache using various types of authentication including Microsoft Entra ID. 
+using var loggerFactory = LoggerFactory.Create(builder =>
+{
+    builder.SetMinimumLevel(LogLevel.Trace);
+    builder.AddSimpleConsole(options =>
+    {
+        options.IncludeScopes = true;
+        options.SingleLine = true;
+        options.UseUtcTimestamp = true;
+        options.TimestampFormat = "HH:mm:ss ";
+    });
+});
+var consoleLogger = loggerFactory.CreateLogger("Sample");
 
+ConfigurationOptions configurationOptions = new()
+{
+    // Use the RESP3 protocol instead of RESP2 so pub/sub messages share the same connection with Redis commands without interruption when tokens expire. 
+    Protocol = RedisProtocol.Resp3,
+
+    // Supply this sample app's logger factory so we can get logs from both Microsoft.Azure.StackExchangeRedis and StackExchange.Redis.
+    LoggerFactory = loggerFactory,
+
+    // Fail fast for the purposes of this sample. In production code, AbortOnConnectFail should remain false to retry connections on startup.
+    AbortOnConnectFail = true,
+};
+
+// NOTE: ConnectionMultiplexer instances should be as long-lived as possible.
+// A singleton ConnectionMultiplexer instance should be used for the lifetime of the client application process.
+ConnectionMultiplexer? connection = null;
+
+Console.WriteLine(@"
+This sample shows how to connect to an Azure Redis cache using different types of Microsoft Entra ID authentication. For details see the README.md. 
+Documentation on using Entra ID authentication with Azure Redis is available at https://aka.ms/redis/entra-auth.
+
+Once the connection is established, Redis commands will execute every 1 second indefinitely, with dots written to the console to indicate success. 
+Any connection disruption will result in exceptions logged to the console. 
+
+If the connection cannot be established due to authentication failure or other issues, exceptions will be logged to the console and no commands will succeed. 
+");
+
+Console.Write("Redis cache host name: ");
+var hostName = Console.ReadLine()?.Trim();
+configurationOptions.EndPoints.Add(hostName!, GetSslPort(hostName!));
+
+Console.WriteLine(@"
 Select the type of authentication to use:
     1. DefaultAzureCredential
     2. User-assigned managed identity
@@ -20,196 +61,191 @@ Select the type of authentication to use:
     7. Access key (without Microsoft Entra ID)
     8. Exit
 ");
-Write("Enter a number: ");
-var option = ReadLine()?.Trim();
+Console.Write("Enter a number: ");
+var option = Console.ReadLine()?.Trim();
 
-// NOTE: ConnectionMultiplexer instances should be as long-lived as possible. Ideally a single ConnectionMultiplexer per cache is reused over the lifetime of the client application process.
-ConnectionMultiplexer? connectionMultiplexer = null;
-StringWriter connectionLog = new(); // Collects detailed connection logs from StackExchange.Redis
-
-try
+switch (option)
 {
-    switch (option)
-    {
-        case "1": // DefaultAzureCredential 
-            Write("Redis cache host name: ");
-            var cacheHostName = ReadLine()?.Trim();
+    case "1":// DefaultAzureCredential 
+        Log("Connecting using DefaultAzureCredential...");
 
-            Write("Connecting using DefaultAzureCredential...");
-            var configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
-            configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            LogTokenEvents(configurationOptions);
+        // Acquire initial token and configure the connection to use it
+        await configurationOptions.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential());
+        break;
 
-            connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
-            break;
+    case "2": // User-Assigned managed identity
+        Console.Write("Managed identity Client ID or resource ID: ");
+        var managedIdentityId = Console.ReadLine()?.Trim();
 
-        case "2": // User-Assigned managed identity
-            Write("Redis cache host name: ");
-            cacheHostName = ReadLine()?.Trim();
-            Write("Managed identity Client ID or resource ID: ");
-            var managedIdentityId = ReadLine()?.Trim();
+        Log("Connecting with a user-assigned managed identity...");
 
-            WriteLine("Connecting with a user-assigned managed identity...");
-            configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithUserAssignedManagedIdentityAsync(managedIdentityId!);
-            configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            LogTokenEvents(configurationOptions);
+        // Acquire initial token and configure the connection to use it
+        await configurationOptions.ConfigureForAzureWithUserAssignedManagedIdentityAsync(managedIdentityId!);
+        break;
 
-            connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
-            break;
+    case "3": // System-Assigned managed identity
+        Log("Connecting with a system-assigned managed identity...");
 
-        case "3": // System-Assigned managed identity
-            Write("Redis cache host name: ");
-            cacheHostName = ReadLine()?.Trim();
+        // Acquire initial token and configure the connection to use it
+        await configurationOptions.ConfigureForAzureWithSystemAssignedManagedIdentityAsync();
+        break;
 
-            WriteLine("Connecting with a system-assigned managed identity...");
-            configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithSystemAssignedManagedIdentityAsync();
-            configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            LogTokenEvents(configurationOptions);
+    case "4": // Service principal secret
+        Console.Write("Service principal Application (client) ID: ");
+        var clientId = Console.ReadLine()?.Trim();
+        Console.Write("Service principal Tenant ID: ");
+        var tenantId = Console.ReadLine()?.Trim();
+        Console.Write("Service principal secret: ");
+        var secret = Console.ReadLine()?.Trim();
 
-            connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
-            break;
+        Log("Connecting with a service principal secret...");
 
-        case "4": // Service principal secret
-            Write("Redis cache host name: ");
-            cacheHostName = ReadLine()?.Trim();
-            Write("Service principal Application (client) ID: ");
-            var clientId = ReadLine()?.Trim();
-            Write("Service principal Tenant ID: ");
-            var tenantId = ReadLine()?.Trim();
-            Write("Service principal secret: ");
-            var secret = ReadLine()?.Trim();
+        // Acquire initial token and configure the connection to use it
+        await configurationOptions.ConfigureForAzureWithServicePrincipalAsync(clientId!, tenantId!, secret!);
+        break;
 
-            WriteLine("Connecting with a service principal secret...");
-            configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithServicePrincipalAsync(clientId!, tenantId!, secret!);
-            configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            LogTokenEvents(configurationOptions);
+    case "5": // Service principal certificate
+        Console.Write("Service principal Application (client) ID: ");
+        clientId = Console.ReadLine()?.Trim();
+        Console.Write("Service principal Tenant ID: ");
+        tenantId = Console.ReadLine()?.Trim();
+        Console.Write("Path to certificate file: ");
+        var certFilePath = Console.ReadLine()?.Trim();
+        Console.Write("Certificate file password: ");
+        var certPassword = Console.ReadLine()?.Trim();
 
-            connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
-            break;
+        Log("Connecting with a service principal certificate...");
 
-        case "5": // Service principal certificate
-            Write("Redis cache host name: ");
-            cacheHostName = ReadLine()?.Trim();
-            Write("Service principal Application (client) ID: ");
-            clientId = ReadLine()?.Trim();
-            Write("Service principal Tenant ID: ");
-            tenantId = ReadLine()?.Trim();
-            Write("Path to certificate file: ");
-            var certFilePath = ReadLine()?.Trim();
-            Write("Certificate file password: ");
-            var certPassword = ReadLine()?.Trim();
+        // Acquire initial token and configure the connection to use it
+        await configurationOptions.ConfigureForAzureWithServicePrincipalAsync(
+            clientId!,
+            tenantId!,
+            certificate: new X509Certificate2(certFilePath!, certPassword, X509KeyStorageFlags.EphemeralKeySet)!);
+        break;
 
-            WriteLine("Loading certificate...");
-            var certificate = new X509Certificate2(certFilePath!, certPassword, X509KeyStorageFlags.EphemeralKeySet);
+    case "6": // Service principal certificate with Subject Name + Issuer authentication (Microsoft internal use only)
+        Console.Write("Service principal Application (client) ID: ");
+        clientId = Console.ReadLine()?.Trim();
+        Console.Write("Service principal Tenant ID: ");
+        tenantId = Console.ReadLine()?.Trim();
+        Console.Write("Path to certificate file: ");
+        certFilePath = Console.ReadLine()?.Trim();
+        Console.Write("Certificate file password: ");
+        certPassword = Console.ReadLine()?.Trim();
 
-            WriteLine("Connecting with a service principal certificate...");
-            configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureWithServicePrincipalAsync(clientId!, tenantId!, certificate: certificate!);
-            configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            LogTokenEvents(configurationOptions);
+        Log("Connecting with a service principal certificate (with Subject Name + Issuer authentication)...");
 
-            connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
-            break;
+        // Acquire initial token and configure the connection to use it
+        await configurationOptions.ConfigureForAzureAsync(new AzureCacheOptions
+        {
+            ClientId = clientId!,
+            ServicePrincipalTenantId = tenantId!,
+            ServicePrincipalCertificate = new X509Certificate2(certFilePath!, certPassword, X509KeyStorageFlags.EphemeralKeySet),
+            SendX5C = true // Enables Subject Name + Issuer authentication
+        });
+        break;
 
-        case "6": // Service principal certificate with Subject Name + Issuer authentication (Microsoft internal use only)
-            Write("Redis cache host name: ");
-            cacheHostName = ReadLine()?.Trim();
-            Write("Service principal Application (client) ID: ");
-            clientId = ReadLine()?.Trim();
-            Write("Service principal Tenant ID: ");
-            tenantId = ReadLine()?.Trim();
-            Write("Path to certificate file: ");
-            certFilePath = ReadLine()?.Trim();
-            Write("Certificate file password: ");
-            certPassword = ReadLine()?.Trim();
+    case "7": // Access key (without Microsoft Entra ID)
+        Console.Write("Access key: ");
+        configurationOptions.Password = Console.ReadLine()?.Trim();
 
-            WriteLine("Loading certificate...");
-            certificate = new X509Certificate2(certFilePath!, certPassword, X509KeyStorageFlags.EphemeralKeySet);
+        Log("Connecting with an access key...");
+        break;
 
-            WriteLine("Connecting with a service principal certificate (with Subject Name + Issuer authentication)...");
-            var azureCacheOptions = new AzureCacheOptions
-            {
-                ClientId = clientId!,
-                ServicePrincipalTenantId = tenantId!,
-                ServicePrincipalCertificate = certificate,
-                SendX5C = true // Enables Subject Name + Issuer authentication
-            };
-            configurationOptions = await ConfigurationOptions.Parse($"{cacheHostName}:6380").ConfigureForAzureAsync(azureCacheOptions);
-            configurationOptions.AbortOnConnectFail = true; // Fail fast for the purposes of this sample. In production code, this should remain false to retry connections on startup
-            LogTokenEvents(configurationOptions);
-
-            connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions, connectionLog);
-            break;
-
-        case "7": // Access key (without Microsoft Entra ID)
-            Write("Redis cache connection string: ");
-            var connectionString = ReadLine()?.Trim();
-
-            WriteLine("Connecting with an access key...");
-            connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(connectionString!, AzureCacheForRedis.ConfigureForAzure, connectionLog);
-            break;
-
-        default:
-            return;
-    }
-
-    WriteLine("Connected successfully!");
-    WriteLine();
-}
-catch (Exception ex)
-{
-    Error.WriteLine($"Failed to connect: {ex}");
-    WriteLine();
-    return;
-}
-finally
-{
-    WriteLine("Connection log from StackExchange.Redis:");
-    WriteLine(connectionLog);
+    default:
+        return;
 }
 
-LogConnectionEvents(connectionMultiplexer);
+SubscribeToTokenEvents(configurationOptions);
+connection = await ConnectionMultiplexer.ConnectAsync(configurationOptions) ?? throw new Exception("Failed to initiate connection to Redis.");
+SubscribeToConnectionEvents(connection);
 
-// This loop will execute commands on the Redis cache every 2 minutes indefinitely. 
-// Let it run for longer than a token lifespan (1-24 hours depending on Entra tenant configuration)
-// to see how the connection remains functional even after the initial token has expired. 
-var database = connectionMultiplexer?.GetDatabase();
+var database = connection.GetDatabase();
+var key = "sample";
+
+Console.WriteLine();
+Console.WriteLine("Esc to quit. Let the sample run longer than a token lifetime (1+ hours) to see that the connection is sustained despite expiration of the initial token, without any disruption or command failures.");
+
 while (true)
 {
-    // Read and write a key every 2 minutes and output a '+' to show that the connection is working
     try
     {
-        // NOTE: Always use the *Async() versions of StackExchange.Redis methods if possible (e.g. StringSetAsync(), StringGetAsync())
-        var value = await database!.StringGetAsync("key");
-        await database.StringSetAsync("key", DateTime.UtcNow.ToString());
-        Log($"Success! Previous value: {value}");
+        var value = await database.StringGetAsync(key);
     }
     catch (Exception ex)
     {
-        // NOTE: Production applications should implement a retry strategy to handle any commands that fail
-        Error.WriteLine($"Failed to execute a Redis command: {ex}");
+        LogError($"Failed to GET key '{key}': {ex}");
     }
 
-    await Task.Delay(TimeSpan.FromMinutes(2));
+    try
+    {
+        var value = $"Set at {DateTime.UtcNow:s}Z";
+        await database.StringSetAsync(key, value);
+    }
+    catch (Exception ex)
+    {
+        LogError($"Failed to SET key '{key}': {ex}");
+    }
+
+    // Write a dot to the console to indicate that the sample has successfully executed Redis commands
+    Console.Write(".");
+
+    await Task.Delay(TimeSpan.FromSeconds(1));
+
+    if (Console.KeyAvailable && Console.ReadKey(intercept: true).Key == ConsoleKey.Escape)
+    {
+        break;
+    }
 }
 
-static void LogTokenEvents(ConfigurationOptions configurationOptions)
+int GetSslPort(string hostName)
+{
+    switch (hostName[hostName.IndexOf('.')..].ToLowerInvariant())
+    {
+        case ".redis.cache.windows.net":
+        case ".redis.cache.chinacloudapi.cn":
+        case ".redis.cache.usgovcloudapi.net":
+            return 6380;
+        case ".redis.azure.net":
+        case ".redis.chinacloudapi.cn":
+        case ".redis.usgovcloudapi.net":
+        case ".redis.sovcloud-api.fr":
+        case ".redis.sovcloud-api.de":
+        case ".redis.sovcloud-api.sg":
+            return 10000;
+        default:
+            break;
+    }
+
+    Console.Write("Port: ");
+    return Convert.ToInt32(Console.ReadLine()?.Trim());
+}
+
+void SubscribeToTokenEvents(ConfigurationOptions configurationOptions)
 {
     if (configurationOptions.Defaults is IAzureCacheTokenEvents tokenEvents)
     {
-        tokenEvents.TokenRefreshed += (sender, tokenResult) => Log($"Token refreshed. New token will expire at {tokenResult.ExpiresOn:s}");
-        tokenEvents.TokenRefreshFailed += (sender, args) => Log($"Token refresh failed for token expiring at {args.Expiry}: {args.Exception}");
-        tokenEvents.ConnectionReauthenticated += (sender, endpoint) => Log($"Re-authenticated connection to '{endpoint}'");
-        tokenEvents.ConnectionReauthenticationFailed += (sender, args) => Log($"Re-authentication of connection to '{args.Endpoint}' failed: {args.Exception}");
+        tokenEvents.TokenRefreshed += (sender, tokenResult) => Log($"{nameof(tokenEvents.TokenRefreshed)} event raised! New token will expire at {tokenResult.ExpiresOn:s}Z");
+        tokenEvents.TokenRefreshFailed += (sender, args) => LogError($"{nameof(tokenEvents.TokenRefreshFailed)} event raised!. Current token will expire at {args.Expiry}: {args.Exception}");
+        tokenEvents.ConnectionReauthenticated += (sender, endpoint) => Log($"{nameof(tokenEvents.ConnectionReauthenticated)} event raised! For endpoint '{endpoint}'");
+        tokenEvents.ConnectionReauthenticationFailed += (sender, args) => LogError($"{nameof(tokenEvents.ConnectionReauthenticationFailed)} event raised! For endpoint '{args.Endpoint}': {args.Exception}");
+    }
+    else
+    {
+        Log($"{nameof(configurationOptions)} does not implement {nameof(IAzureCacheTokenEvents)}. No token events will be logged.");
     }
 }
 
-static void LogConnectionEvents(ConnectionMultiplexer connectionMultiplexer)
+void SubscribeToConnectionEvents(ConnectionMultiplexer connectionMultiplexer)
 {
-    connectionMultiplexer.ConnectionFailed += (sender, args) => Log($"Connection failed: {args.Exception}");
-    connectionMultiplexer.ConnectionRestored += (sender, args) => Log($"Connection restored to '{args.EndPoint}'");
-    connectionMultiplexer.ErrorMessage += (sender, args) => Log($"Error: {args.Message}");
-    connectionMultiplexer.InternalError += (sender, args) => Log($"Internal error: {args.Exception}");
+    connectionMultiplexer.ConnectionFailed += (sender, args) => LogError($"{nameof(connectionMultiplexer.ConnectionFailed)} event raised: {args.Exception}");
+    connectionMultiplexer.ConnectionRestored += (sender, args) => Log($"{nameof(connectionMultiplexer.ConnectionRestored)} event raised for endpoint '{args.EndPoint}'");
+    connectionMultiplexer.ErrorMessage += (sender, args) => LogError($"{nameof(connectionMultiplexer.ErrorMessage)} event raised: {args.Message}");
+    connectionMultiplexer.InternalError += (sender, args) => LogError($"{nameof(connectionMultiplexer.InternalError)} event raised: {args.Exception}");
 }
 
-static void Log(string message)
-    => WriteLine($"{DateTime.Now:s}: {message}");
+void Log(string message)
+    => consoleLogger.LogInformation($"{DateTime.UtcNow:s}Z: {message}");
+
+void LogError(string message)
+    => consoleLogger.LogError($"{DateTime.UtcNow:s}Z: {message}");

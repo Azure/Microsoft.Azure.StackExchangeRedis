@@ -19,18 +19,18 @@ internal interface ICacheIdentityClient
     /// Acquire a token to be used to authenticate a connection.
     /// </summary>
     /// <returns>A TokenResult containing a token and expiration</returns>
-    Task<TokenResult> GetTokenAsync();
+    Task<TokenResult> GetTokenAsync(CancellationToken cancellationToken);
 }
 
 internal class CacheIdentityClient : ICacheIdentityClient
 {
-    private readonly Func<Task<TokenResult>> _getToken;
+    private readonly Func<CancellationToken, Task<TokenResult>> _getToken;
 
-    private CacheIdentityClient(Func<ValueTask<AccessToken>> getToken)
-        => _getToken = async () => new TokenResult(await getToken.Invoke().ConfigureAwait(false));
+    private CacheIdentityClient(Func<CancellationToken, ValueTask<AccessToken>> getToken)
+        => _getToken = async (cancellationToken) => new TokenResult(await getToken.Invoke(cancellationToken).ConfigureAwait(false));
 
-    private CacheIdentityClient(Func<Task<AuthenticationResult>> getToken)
-        => _getToken = async () => new TokenResult(await getToken.Invoke().ConfigureAwait(false));
+    private CacheIdentityClient(Func<CancellationToken, Task<AuthenticationResult>> getToken)
+        => _getToken = async (cancellationToken) => new TokenResult(await getToken.Invoke(cancellationToken).ConfigureAwait(false));
 
     internal static ICacheIdentityClient CreateForManagedIdentity(AzureCacheOptions options)
     {
@@ -42,7 +42,7 @@ internal class CacheIdentityClient : ICacheIdentityClient
                           : ManagedIdentityId.WithUserAssignedResourceId(options.ClientId))
                   .Build();
 
-        return new CacheIdentityClient(getToken: () => clientApp.AcquireTokenForManagedIdentity(options.Scope).ExecuteAsync());
+        return new CacheIdentityClient(getToken: (cancellationToken) => clientApp.AcquireTokenForManagedIdentity(options.Scope).ExecuteAsync(cancellationToken));
     }
 
     internal static ICacheIdentityClient CreateForServicePrincipal(AzureCacheOptions options)
@@ -52,18 +52,18 @@ internal class CacheIdentityClient : ICacheIdentityClient
             .WithCredentials(options)
             .Build();
 
-        return new CacheIdentityClient(getToken: () => clientApp.AcquireTokenForClient(new[] { options.Scope }).ExecuteAsync());
+        return new CacheIdentityClient(getToken: (cancellationToken) => clientApp.AcquireTokenForClient(new[] { options.Scope }).ExecuteAsync(cancellationToken));
     }
 
     internal static ICacheIdentityClient CreateForTokenCredential(TokenCredential tokenCredential, string scope)
     {
         var tokenRequestContext = new TokenRequestContext(new[] { scope });
 
-        return new CacheIdentityClient(getToken: () => tokenCredential.GetTokenAsync(tokenRequestContext, CancellationToken.None));
+        return new CacheIdentityClient(getToken: (cancellationToken) => tokenCredential.GetTokenAsync(tokenRequestContext, cancellationToken));
     }
 
-    async Task<TokenResult> ICacheIdentityClient.GetTokenAsync()
-        => await _getToken.Invoke().ConfigureAwait(false);
+    async Task<TokenResult> ICacheIdentityClient.GetTokenAsync(CancellationToken cancellationToken)
+        => await _getToken.Invoke(cancellationToken).ConfigureAwait(false);
 
 }
 

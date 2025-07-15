@@ -20,7 +20,7 @@ public static class AzureCacheForRedis
     /// Configures a Redis connection authenticated with an access key.
     /// </summary>
     public static Action<ConfigurationOptions> ConfigureForAzure
-        => (ConfigurationOptions configurationOptions) => configurationOptions.Defaults = new AzureCacheOptionsProvider();
+        => configurationOptions => configurationOptions.Defaults = new AzureCacheOptionsProvider();
 
     /// <summary>
     /// Configures a Redis connection authenticated using a system-assigned managed identity.
@@ -101,11 +101,11 @@ public static class AzureCacheForRedis
         this ConfigurationOptions configurationOptions,
         AzureCacheOptions azureCacheOptions)
     {
-        var optionsProvider = new AzureCacheOptionsProviderWithToken(azureCacheOptions);
+        var optionsProvider = new AzureCacheOptionsProviderWithToken(azureCacheOptions, configurationOptions.LoggerFactory);
 
         try
         {
-            await optionsProvider.AcquireTokenAsync(azureCacheOptions.ThrowOnTokenRefreshFailure).ConfigureAwait(false);
+            await optionsProvider.AcquireTokenAsync(throwOnFailure: true).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
