@@ -18,16 +18,17 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 {
     internal ICacheIdentityClient IdentityClient; // internal so unit tests can inject a fake
 
-    private readonly System.Timers.Timer _tokenRefreshTimer = new();
     private readonly AzureCacheOptions _azureCacheOptions;
-    internal string? _user;
+    private int _currentActiveConnections = 0;
+    private readonly System.Timers.Timer? _heartbeatTimer = new();
+    private string? _user;
     private string? _token;
     private DateTime _tokenAcquiredTime = DateTime.MinValue;
     private DateTime _tokenExpiry = DateTime.MinValue;
 
     private readonly ConcurrentDictionary<int, CacheConnection> _cacheConnections = new();
     private int _nextConnectionId = 0;
-    private ILogger? _log = null;
+    private readonly ILogger? _log;
 
     internal AzureCacheOptionsProviderWithToken(
         AzureCacheOptions azureCacheOptions,
@@ -39,8 +40,8 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
         IdentityClient = GetIdentityClient(azureCacheOptions);
 
-        _tokenRefreshTimer.Interval = azureCacheOptions.TokenHeartbeatInterval.TotalMilliseconds;
-        _tokenRefreshTimer.Elapsed += async (s, e) =>
+        _heartbeatTimer.Interval = azureCacheOptions.TokenHeartbeatInterval.TotalMilliseconds;
+        _heartbeatTimer.Elapsed += async (s, e) =>
         {
             try
             {
@@ -50,11 +51,11 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
             {
                 // Throwing exceptions inside an async void Timer handler would crash the process, do don't allow them to propagate
                 // Any exceptions thrown during token retrieval will be reported to the client application via the TokenRefreshFailed or ConnectionReauthenticationFailed events
-                _log?.LogError(ex, $"Failed attempt to ensure that connection authentication is current. Next attempt in {azureCacheOptions.TokenHeartbeatInterval.TotalSeconds} seconds");
+                _log?.LogError(ex, $"Failed to ensure that connection authentication is current. Next attempt in {azureCacheOptions.TokenHeartbeatInterval.TotalSeconds} seconds");
             }
         };
-        _tokenRefreshTimer.AutoReset = true;
-        _tokenRefreshTimer.Start();
+        _heartbeatTimer.AutoReset = true;
+        _heartbeatTimer.Start();
     }
 
     /// <summary>
@@ -93,7 +94,10 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     /// <returns>True for all cases.</returns>
     public override bool GetDefaultSsl(EndPointCollection _) => true;
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// The username used to authenticate with the server. 
+    /// For Entra ID authentication, this should be the Object ID of the identity used to acquire the token.
+    /// </summary>
     public override string? User => _user;
 
     /// <inheritdoc/>
@@ -140,11 +144,18 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
             // This is a new connection, so assume it was authenticated with the current token
             _cacheConnections.TryAdd(Interlocked.Increment(ref _nextConnectionId), new(connectionMultiplexer, _tokenExpiry));
 
+            if (Interlocked.Increment(ref _currentActiveConnections) == 1)
+            {
+                // Start token refresh timer when connection count moves from 0 to 1
+                _heartbeatTimer?.Start();
+                _log?.LogInformation("Redis connection established. Starting token refresh.");
+            }
+
             await base.AfterConnectAsync(connectionMultiplexer, log).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            await InvokeHandlerWithTimeoutAsync(() => log.Invoke($"Microsoft.Azure.StackExchangeRedis: Failed to initialize new connection: {ex}"), $"{nameof(AfterConnectAsync)} {nameof(log)}");
+            _log?.LogError($"Failed to initialize new connection: {ex}");
         }
     }
 
@@ -193,9 +204,9 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
         for (var attemptCount = 0; attemptCount < _azureCacheOptions.MaxTokenRefreshAttempts; ++attemptCount)
         {
-            // Cancel call to acquire token after 10+ seconds. Fail fast on initial call to evade a transient hang,
+            // Cancel call to acquire token after 10+ seconds. Fail fast (10s) on initial call to evade a transient hang,
             // then increase timeout on subsequent attempts in case it legitimately needs more time. 
-            CancellationTokenSource cts = new(TimeSpan.FromSeconds(10 + (attemptCount * 5)));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10 + (attemptCount * 5)));
 
             try
             {
@@ -234,10 +245,16 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         }
 
         // Successfully acquired a fresh token
-        _token = tokenResult.Token;
         _tokenAcquiredTime = DateTime.UtcNow;
+        _token = tokenResult.Token;
         _tokenExpiry = tokenResult.ExpiresOn.UtcDateTime;
-        _log?.LogInformation($"Acquired new token with expiration: {tokenResult.ExpiresOn.UtcDateTime:s} UTC");
+        if (_user is null)
+        {
+            // Extract user name from the first token acquired for an identity
+            _user = _azureCacheOptions.GetUserName(_token);
+            _log?.LogInformation($"Acquired token for identity with Object ID: '{_user}'");
+        }
+        _log?.LogInformation($"Acquired token with expiration: {tokenResult.ExpiresOn.UtcDateTime:s} UTC");
         await InvokeHandlerWithTimeoutAsync(() => TokenRefreshed?.Invoke(this, tokenResult), nameof(TokenRefreshed));
     }
 
@@ -258,8 +275,9 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
             if (!connection.Value.ConnectionMultiplexerReference.TryGetTarget(out var connectionMultiplexer))
             {
-                // The IConnectionMultiplexer reference is no longer valid
-                _cacheConnections.TryRemove(connection.Key, out _);
+                // The ConnectionMultiplexer reference is no longer valid
+                _log?.LogInformation("A Redis connection has been released and will no longer be managed.");
+                StopManagingConnection(connection.Key);
                 continue;
             }
 
@@ -278,8 +296,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                         if (!server.IsConnected)
                         {
                             // Avoid backlogging an AUTH command for a server that's not currently connected.
-                            // When the connection is restored, it will use the latest token so no need for an additional AUTH command.
-                            _log?.LogWarning($"Skipping re-authentication for '{server.EndPoint}' because it is not currently connected.");
+                            _log?.LogWarning($"Skipping re-authentication for '{server.EndPoint}' because it is not currently connected. It will use the new token when it reconnects.");
                             continue;
                         }
 
@@ -294,14 +311,19 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                                 await server.ExecuteAsync("AUTH", User!, Password!).ConfigureAwait(false);
                                 _log?.LogInformation($"Re-authenticated connection to '{server.EndPoint}' with a token that will expire at {_tokenExpiry:s} UTC");
 
-                                await InvokeHandlerWithTimeoutAsync(() => ConnectionReauthenticated?.Invoke(this, server.EndPoint.ToString()!), nameof(ConnectionReauthenticated));
+                                await InvokeHandlerWithTimeoutAsync(() => ConnectionReauthenticated?.Invoke(this, server.EndPoint.ToString()!), nameof(ConnectionReauthenticated)).ConfigureAwait(false);
+                            }
+                            catch (ObjectDisposedException)
+                            {
+                                // This ConnectionMultiplexer has been disposed. Abort re-authentication of all its server connections.
+                                throw;
                             }
                             catch (Exception ex)
                             {
                                 _log?.LogError(ex, $"Failed to re-authenticate connection to '{server.EndPoint}'. Current token will expire at {connection.Value.TokenExpiry:s} UTC. Potential causes include high Redis server load or short command timeout configuration. Will try again on the next heartbeat.");
                                 allServersReauthenticated = false;
 
-                                await InvokeHandlerWithTimeoutAsync(() => ConnectionReauthenticationFailed?.Invoke(this, new(ex, server.EndPoint.ToString()!)), nameof(ConnectionReauthenticationFailed));
+                                await InvokeHandlerWithTimeoutAsync(() => ConnectionReauthenticationFailed?.Invoke(this, new(ex, server.EndPoint.ToString()!)), nameof(ConnectionReauthenticationFailed)).ConfigureAwait(false);
                             }
                         }));
                     }
@@ -312,34 +334,51 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                         connection.Value.TokenExpiry = _tokenExpiry;
                     }
                 }
+                catch (ObjectDisposedException)
+                {
+                    _log?.LogInformation("A Redis connection has been disposed and will no longer be managed.");
+                    StopManagingConnection(connection.Key);
+                }
                 catch (Exception ex)
                 {
                     _log?.LogError(ex, $"Failed to re-authenticate connections in client '{connectionMultiplexer.ClientName}'. Current token will expire at {connection.Value.TokenExpiry:s} UTC.");
-                    await InvokeHandlerWithTimeoutAsync(() => ConnectionReauthenticationFailed?.Invoke(this, new(ex, connectionMultiplexer.ClientName)), nameof(ConnectionReauthenticationFailed));
+                    await InvokeHandlerWithTimeoutAsync(() => ConnectionReauthenticationFailed?.Invoke(this, new(ex, connectionMultiplexer.ClientName)), nameof(ConnectionReauthenticationFailed)).ConfigureAwait(false);
+                }
+                finally
+                {
+                    // Explicitly release this strong reference so only the WeakReference remains and the ConnectionMultiplexer can be garbage collected if the client app releases it.
+                    connectionMultiplexer = null;
                 }
             }));
         }
         await Task.WhenAll(connectionTasks).ConfigureAwait(false);
     }
 
+    private void StopManagingConnection(int key)
+    {
+        if (_cacheConnections.TryRemove(key, out _)
+            && Interlocked.Decrement(ref _currentActiveConnections) == 0)
+        {
+            _heartbeatTimer?.Stop();
+            _log?.LogWarning("No more Redis connections to manage. Stopping token refresh.");
+        }
+    }
+
+    private static readonly TimeSpan HandlerTimeout = TimeSpan.FromSeconds(5);
     private async Task InvokeHandlerWithTimeoutAsync(Action handler, string name)
     {
-        var invocation = Task.Run(() =>
+        try
         {
-            try
-            {
-                handler.Invoke();
-            }
-            catch (Exception ex)
-            {
-                // If the handler throws, we don't want to crash the process, so we catch and log it
-                _log?.LogError(ex, $"Handler for {name} failed");
-            }
-        });
+            var invocation = Task.Run(() => handler.Invoke());
 
-        if (invocation != await Task.WhenAny(invocation, Task.Delay(TimeSpan.FromSeconds(5))).ConfigureAwait(false))
+            if (invocation != await Task.WhenAny(invocation, Task.Delay(HandlerTimeout)).ConfigureAwait(false))
+            {
+                _log?.LogError($"Handler for {name} timed out after 5 seconds");
+            }
+        }
+        catch (Exception ex)
         {
-            _log?.LogError($"Handler for {name} timed out after 5 seconds");
+            _log?.LogError(ex, $"Handler for {name} failed");
         }
     }
 

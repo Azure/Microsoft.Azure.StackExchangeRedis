@@ -15,12 +15,12 @@ public class TokenResult
     /// <summary>
     /// Token to be used for authentication.
     /// </summary>
-    public string Token { get; set; }
+    public string Token { get; }
 
     /// <summary>
     /// Expiry for the acquired token.
     /// </summary>
-    public DateTimeOffset ExpiresOn { get; set; }
+    public DateTimeOffset ExpiresOn { get; }
 
     /// <summary>
     /// Creates a TokenResult from an AuthenticationResult.

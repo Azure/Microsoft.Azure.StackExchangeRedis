@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Azure.Core;
 using Microsoft.Azure.StackExchangeRedis;
+using Microsoft.Extensions.Azure;
 using Microsoft.Identity.Client;
 
 namespace StackExchange.Redis;
@@ -105,6 +106,10 @@ public static class AzureCacheForRedis
 
         try
         {
+            // Log diagnostic details from Azure Identity as it attempts to acquire the initial token
+            using var azureEventSourceLogForwarder = new AzureEventSourceLogForwarder(configurationOptions.LoggerFactory);
+            azureEventSourceLogForwarder.Start();
+            
             await optionsProvider.AcquireTokenAsync(throwOnFailure: true).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -113,7 +118,6 @@ public static class AzureCacheForRedis
         }
 
         configurationOptions.Defaults = optionsProvider;
-        optionsProvider._user = configurationOptions.User ?? azureCacheOptions.GetUserName(configurationOptions.Password);
 
         return configurationOptions;
     }
