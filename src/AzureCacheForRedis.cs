@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Azure.Core;
 using Microsoft.Azure.StackExchangeRedis;
+using Microsoft.Extensions.Azure;
 using Microsoft.Identity.Client;
 
 namespace StackExchange.Redis;
@@ -20,7 +21,7 @@ public static class AzureCacheForRedis
     /// Configures a Redis connection authenticated with an access key.
     /// </summary>
     public static Action<ConfigurationOptions> ConfigureForAzure
-        => (ConfigurationOptions configurationOptions) => configurationOptions.Defaults = new AzureCacheOptionsProvider();
+        => configurationOptions => configurationOptions.Defaults = new AzureCacheOptionsProvider();
 
     /// <summary>
     /// Configures a Redis connection authenticated using a system-assigned managed identity.
@@ -101,11 +102,15 @@ public static class AzureCacheForRedis
         this ConfigurationOptions configurationOptions,
         AzureCacheOptions azureCacheOptions)
     {
-        var optionsProvider = new AzureCacheOptionsProviderWithToken(azureCacheOptions);
+        var optionsProvider = new AzureCacheOptionsProviderWithToken(azureCacheOptions, configurationOptions.LoggerFactory);
 
         try
         {
-            await optionsProvider.AcquireTokenAsync(azureCacheOptions.ThrowOnTokenRefreshFailure).ConfigureAwait(false);
+            // Log diagnostic details from Azure Identity as it attempts to acquire the initial token
+            using var azureEventSourceLogForwarder = new AzureEventSourceLogForwarder(configurationOptions.LoggerFactory);
+            azureEventSourceLogForwarder.Start();
+            
+            await optionsProvider.AcquireTokenAsync(throwOnFailure: true).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -113,7 +118,6 @@ public static class AzureCacheForRedis
         }
 
         configurationOptions.Defaults = optionsProvider;
-        optionsProvider._user = configurationOptions.User ?? azureCacheOptions.GetUserName(configurationOptions.Password);
 
         return configurationOptions;
     }

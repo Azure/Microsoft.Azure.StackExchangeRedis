@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Version>3.2.2</Version>
+    <Version>3.3.0</Version>
     <Copyright>© Microsoft Corporation. All rights reserved.</Copyright>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <PackageId>$(AssemblyName)</PackageId>

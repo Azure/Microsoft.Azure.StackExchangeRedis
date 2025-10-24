@@ -32,9 +32,7 @@ Microsoft.Azure.StackExchangeRedis.AzureCacheOptions.TokenCredential -> Azure.Co
 Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.TokenRefreshed -> System.EventHandler<Microsoft.Azure.StackExchangeRedis.TokenResult!>?
 Microsoft.Azure.StackExchangeRedis.IAzureCacheTokenEvents.TokenRefreshFailed -> System.EventHandler<Microsoft.Azure.StackExchangeRedis.TokenRefreshFailedEventArgs!>?
 Microsoft.Azure.StackExchangeRedis.TokenResult
-Microsoft.Azure.StackExchangeRedis.TokenResult.ExpiresOn.get -> System.DateTimeOffset
-Microsoft.Azure.StackExchangeRedis.TokenResult.ExpiresOn.set -> void
 Microsoft.Azure.StackExchangeRedis.TokenResult.Token.get -> string!
-Microsoft.Azure.StackExchangeRedis.TokenResult.Token.set -> void
+Microsoft.Azure.StackExchangeRedis.TokenResult.ExpiresOn.get -> System.DateTimeOffset
 Microsoft.Azure.StackExchangeRedis.TokenResult.TokenResult(Azure.Core.AccessToken accessToken) -> void
 Microsoft.Azure.StackExchangeRedis.TokenResult.TokenResult(Microsoft.Identity.Client.AuthenticationResult! authenticationResult) -> void

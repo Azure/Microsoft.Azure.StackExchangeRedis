@@ -1,7 +1,10 @@
 <Project>
   <ItemGroup>
     <!-- Packages we depend on for Microsoft.Azure.StackExchangeRedis, upgrades can create binding redirect pain! -->
-    <PackageVersion Include="StackExchange.Redis" Version="2.8.41" />
+    <PackageVersion Include="Microsoft.Extensions.Azure" Version="1.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="8.0.1" />
+    <PackageVersion Include="StackExchange.Redis" Version="2.9.32" />
     <PackageVersion Include="Azure.Identity" Version="1.13.2" />
     <PackageVersion Include="Microsoft.Identity.Client" Version="4.73.1" />
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.12.1" />

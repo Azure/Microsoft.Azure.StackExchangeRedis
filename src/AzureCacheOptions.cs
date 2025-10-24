@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.ComponentModel;
 using System.Security.Cryptography.X509Certificates;
 using Azure.Core;
 using Microsoft.Identity.Client;
@@ -51,7 +52,7 @@ public class AzureCacheOptions
     public string Scope = "https://redis.azure.com/.default";
 
     /// <summary>
-    /// Enables Subject Name + Issuer authentication of certificates (Microsoft internal use only).
+    /// Enables Subject Name + Issuer authentication of certificates (Microsoft internal use only). Default: false.
     /// </summary>
     public bool SendX5C = false;
 
@@ -61,29 +62,26 @@ public class AzureCacheOptions
     public TokenCredential? TokenCredential;
 
     /// <summary>
-    /// Whether or not to throw an exception on failure to refresh an expiring Microsoft Entra ID token.
+    /// Whether or not to throw an exception on failure to acquire or refresh a Microsoft Entra ID token. Default: true.
     /// </summary>
+    [Obsolete("Failure to acquire initial token will always throw; failure to refresh will never throw. This option is ignored, and will be removed in v4.0."),
+     Browsable(false),
+     EditorBrowsable(EditorBrowsableState.Never)]
     public bool ThrowOnTokenRefreshFailure = true;
 
     /// <summary>
     /// Determines whether the current token should be refreshed, based on its age and lifespan.
-    /// The default implementation refreshes the token if it has exceeded 75% of its lifespan.
+    /// The default implementation refreshes the token if it's within 5 minutes of expiring, to match the behavior of the local token cache.
     /// Supply a different implementation if you want to refresh the token at a different interval.
     /// </summary>
-    public Func<DateTime, DateTime, bool> ShouldTokenBeRefreshed = (DateTime acquired, DateTime expiry) =>
-    {
-        var lifespan = expiry - acquired;
-        var age = DateTime.UtcNow - acquired;
-
-        return ((double)age.Ticks / lifespan.Ticks) > .75; // Refresh if current token has exceeded 75% of its lifespan
-    };
+    public Func<DateTime, DateTime, bool> ShouldTokenBeRefreshed = (acquired, expiry) => (expiry - DateTime.UtcNow).TotalMinutes < 5;
 
     /// <summary>
     /// Given an access token, produce the Redis user name to be used for authentication.
     /// The default implementation extracts the 'oid' claim from the token using Microsoft.IdentityModel.JsonWebTokens.
     /// Supply a different implementation if you need to use a different approach to determine the user name.
     /// </summary>
-    public Func<string?, string> GetUserName = (string? token) =>
+    public Func<string?, string> GetUserName = (token) =>
     {
         if (token is null)
         {
@@ -110,13 +108,13 @@ public class AzureCacheOptions
     };
 
     /// <summary>
-    /// Periodic interval to check token for expiration, acquire new tokens, and re-authenticate connections.
+    /// Periodic interval to check token for expiration, acquire new tokens, and re-authenticate connections. Default: 2 minutes.
     /// </summary>
-    internal TimeSpan TokenHeartbeatInterval = TimeSpan.FromMinutes(5);
+    internal TimeSpan TokenHeartbeatInterval = TimeSpan.FromMinutes(2);
 
     /// <summary>
-    /// Number of attempts to acquire a new token (default is 5).
-    /// If none of the attempts succeed, the same number of attempts will be made at the next timer interval.
+    /// Number of attempts to acquire a new token per heartbeat. Default: 5.
+    /// If none of the attempts succeed, the same number of attempts will be made at the next heartbeat.
     /// </summary>
     internal int MaxTokenRefreshAttempts = 5;
 
@@ -125,6 +123,6 @@ public class AzureCacheOptions
     /// The function receives an integer indicating how many attempts have been made and the exception necessitating a retry. It returns a TimeSpan that determines the interval to wait before the next attempt.
     /// By default, wait a number of seconds corresponding to the number of attempts completed.
     /// </summary>
-    internal Func<int, Exception?, TimeSpan> TokenRefreshBackoff = (int attemptCount, Exception? _) => TimeSpan.FromSeconds(attemptCount);
+    internal Func<int, Exception?, TimeSpan> TokenRefreshBackoff = (attemptCount, _) => TimeSpan.FromSeconds(attemptCount);
 
 }

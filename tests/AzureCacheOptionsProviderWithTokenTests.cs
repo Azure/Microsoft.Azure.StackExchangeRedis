@@ -28,24 +28,29 @@ public class AzureCacheOptionsProviderWithTokenTests
             correlationId: default);
         var tokenResult = new TokenResult(authenticationResult);
         var fakeIdentityClient = A.Fake<ICacheIdentityClient>();
-        A.CallTo(() => fakeIdentityClient.GetTokenAsync()).Returns(tokenResult);
+        A.CallTo(() => fakeIdentityClient.GetTokenAsync(A<CancellationToken>._)).Returns(tokenResult);
 
         var configurationOptions = new ConfigurationOptions();
-        var azureCacheOptions = new AzureCacheOptions();
-        var optionsProviderWithToken = new AzureCacheOptionsProviderWithToken(azureCacheOptions);
-        optionsProviderWithToken.IdentityClient = fakeIdentityClient; // Override the IIdentityClient created during instantiation of AzureCacheOptionsProviderWithToken 
-
-        configurationOptions!.Defaults = optionsProviderWithToken;
+        var azureCacheOptions = new AzureCacheOptions()
+        {
+            GetUserName = (token) => "user"
+        };
+        var optionsProviderWithToken = new AzureCacheOptionsProviderWithToken(azureCacheOptions, configurationOptions.LoggerFactory)
+        {
+            IdentityClient = fakeIdentityClient // Override the IIdentityClient created during instantiation of AzureCacheOptionsProviderWithToken 
+        };
 
         var fakeTokenRefreshedHandler = A.Fake<EventHandler<TokenResult>>();
         optionsProviderWithToken.TokenRefreshed += fakeTokenRefreshedHandler;
+
+        configurationOptions!.Defaults = optionsProviderWithToken;
 
         // Execute
         await optionsProviderWithToken.AcquireTokenAsync(throwOnFailure: true);
 
         // Assert
         A.CallTo(() => fakeTokenRefreshedHandler.Invoke(optionsProviderWithToken, A<TokenResult>._)).MustHaveHappenedOnceExactly();
-        A.CallTo(() => fakeIdentityClient.GetTokenAsync()).MustHaveHappenedOnceExactly();
+        A.CallTo(() => fakeIdentityClient.GetTokenAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
         Assert.AreEqual("token", configurationOptions.Password);
     }
 
@@ -56,27 +61,31 @@ public class AzureCacheOptionsProviderWithTokenTests
         var token = new AccessToken("token", DateTimeOffset.UtcNow + TimeSpan.FromMinutes(1));
         var tokenResult = new TokenResult(token);
         var fakeTokenCredentialClient = A.Fake<ICacheIdentityClient>();
-        A.CallTo(() => fakeTokenCredentialClient.GetTokenAsync()).Returns(tokenResult);
+        A.CallTo(() => fakeTokenCredentialClient.GetTokenAsync(A<CancellationToken>._)).Returns(tokenResult);
         var tokenCredential = A.Fake<TokenCredential>();
 
         var configurationOptions = new ConfigurationOptions();
         var azureCacheOptions = new AzureCacheOptions()
         {
-            TokenCredential = tokenCredential
+            TokenCredential = tokenCredential,
+            GetUserName = (token) => "user"
         };
-        var optionsProviderWithToken = new AzureCacheOptionsProviderWithToken(azureCacheOptions);
-        optionsProviderWithToken.IdentityClient = fakeTokenCredentialClient; // Override the IIdentityClient created during instantiation of AzureCacheOptionsProviderWithToken
-        configurationOptions!.Defaults = optionsProviderWithToken;
+        var optionsProviderWithToken = new AzureCacheOptionsProviderWithToken(azureCacheOptions, configurationOptions.LoggerFactory)
+        {
+            IdentityClient = fakeTokenCredentialClient // Override the IIdentityClient created during instantiation of AzureCacheOptionsProviderWithToken
+        };
 
         var fakeTokenRefreshedHandler = A.Fake<EventHandler<TokenResult>>();
         optionsProviderWithToken.TokenRefreshed += fakeTokenRefreshedHandler;
+
+        configurationOptions.Defaults = optionsProviderWithToken;
 
         //Execute
         await optionsProviderWithToken.AcquireTokenAsync(throwOnFailure: true);
 
         //Assert
         A.CallTo(() => fakeTokenRefreshedHandler.Invoke(optionsProviderWithToken, A<TokenResult>._)).MustHaveHappenedOnceExactly();
-        A.CallTo(() => fakeTokenCredentialClient.GetTokenAsync()).MustHaveHappenedOnceExactly();
+        A.CallTo(() => fakeTokenCredentialClient.GetTokenAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
         Assert.AreEqual("token", configurationOptions.Password);
     }
 
