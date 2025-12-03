@@ -71,6 +71,9 @@ The [sample](./sample) directory contains a project showing how to connect to an
 
 NOTE: The sample project uses a `<ProjectReference>` to the extension project in this repo. To run the project on its own using the released Microsoft.Azure.StackExchangeRedis NuGet package, replace the `<ProjectReference>` in `Microsoft.Azure.StackExchangeRedis.Sample.csproj` with a `<PackageReference>`.
 
+## ASP.NET sample
+For an example of how to use the asynchronous `ConfigureForAzure*()` methods to create a Redis connection in a dependency injection scenario like ASP.NET, see the [sample.aspnet](./sample.aspnet) directory. At a high level, this sample wraps the Redis connection in a singleton `[Redis.cs](./sample.aspnet/Services/Redis.cs)` service that's injected into components that need a Redis connection (e.g. [SampleController.cs](./sample.aspnet/Controllers/SampleController.cs)). During startup, code in the top-level [Program.cs](./sample.aspnet/Program.cs) resolves the Redis service singleton and awaits the async call to initialize it and create the Redis connection. 
+
 ## Contributing
 Please read our [CONTRIBUTING.md](CONTRIBUTING.md) which outlines all of our policies, procedures, and requirements for contributing to this project.
 

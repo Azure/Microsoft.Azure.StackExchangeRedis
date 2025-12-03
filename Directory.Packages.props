@@ -17,5 +17,6 @@
     <PackageVersion Include="MSTest.TestAdapter" Version="3.7.2" />
     <PackageVersion Include="MSTest.TestFramework" Version="3.7.2" />
     <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 </Project>
