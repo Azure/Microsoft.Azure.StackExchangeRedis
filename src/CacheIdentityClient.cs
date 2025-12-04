@@ -44,7 +44,7 @@ internal class CacheIdentityClient : ICacheIdentityClient
 
         if (log is not null)
         {
-            clientAppBuilder = clientAppBuilder.WithLogging((level, message, containsPii) => IdentityLog(level, message, containsPii, log), Identity.Client.LogLevel.Info, enablePiiLogging: false, enableDefaultPlatformLogging: false);
+            clientAppBuilder = clientAppBuilder.WithLogging((level, message, containsPii) => IdentityLog(level, message, containsPii, log), Identity.Client.LogLevel.Warning, enablePiiLogging: false, enableDefaultPlatformLogging: false);
         }
 
         var clientApp = clientAppBuilder.Build();
@@ -60,7 +60,7 @@ internal class CacheIdentityClient : ICacheIdentityClient
 
         if (log is not null)
         {
-            clientAppBuilder = clientAppBuilder.WithLogging((level, message, containsPii) => IdentityLog(level, message, containsPii, log), Identity.Client.LogLevel.Info, enablePiiLogging: false, enableDefaultPlatformLogging: false);
+            clientAppBuilder = clientAppBuilder.WithLogging((level, message, containsPii) => IdentityLog(level, message, containsPii, log), Identity.Client.LogLevel.Warning, enablePiiLogging: false, enableDefaultPlatformLogging: false);
         }
 
         var clientApp = clientAppBuilder.Build();
@@ -87,7 +87,7 @@ internal class CacheIdentityClient : ICacheIdentityClient
 
         var logLevel = level switch
         {
-            Identity.Client.LogLevel.Always => Extensions.Logging.LogLevel.Critical,
+            Identity.Client.LogLevel.Always => Extensions.Logging.LogLevel.Information,
             Identity.Client.LogLevel.Error => Extensions.Logging.LogLevel.Error,
             Identity.Client.LogLevel.Warning => Extensions.Logging.LogLevel.Warning,
             Identity.Client.LogLevel.Info => Extensions.Logging.LogLevel.Information,
