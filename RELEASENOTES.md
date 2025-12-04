@@ -3,7 +3,8 @@
 ## Unreleased
 
 ## 3.3.1
-- Add an ASP.NET sample to address [#86](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/86)
+- Update dependency package versions to get a fix for a vulnerability ([#88 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/88)) to address [#85](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/85)
+- Add an ASP.NET sample for dependency injection with async initialization ([#87 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/87)) to address [#86](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/86)
 
 ## 3.3.0
 - Fix [#69](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/69), [#70](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/70): Improve token refresh resilience and add logging ([#82 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/82))
