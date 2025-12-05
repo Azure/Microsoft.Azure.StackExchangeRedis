@@ -221,8 +221,8 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                 _log?.LogWarning(ex, $"Failed to acquire token on attempt {attemptCount + 1} of {_azureCacheOptions.MaxTokenRefreshAttempts}.");
             }
 
-
             Thread.Sleep(_azureCacheOptions.TokenRefreshBackoff.Invoke(attemptCount, lastException));
+
         }
 
         if (tokenResult is null)

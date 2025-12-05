@@ -36,8 +36,8 @@ internal class CacheIdentityClient : ICacheIdentityClient
     private CacheIdentityClient(
             Func<CancellationToken, ValueTask<AccessToken>> getTokenAsync)
         : this(
-              getToken: null,
-              getTokenAsync)
+            getToken: null,
+            getTokenAsync)
     { }
 
     private CacheIdentityClient(
