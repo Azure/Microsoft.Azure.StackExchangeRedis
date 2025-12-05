@@ -3,6 +3,7 @@
 ## Unreleased
 
 ## 3.3.1
+- Get additional logging from the Microsoft Identity library ([#89 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/89))
 - Update dependency package versions to get a fix for a vulnerability ([#88 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/88)) to address [#85](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/85)
 - Add an ASP.NET sample for dependency injection with async initialization ([#87 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/87)) to address [#86](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/86)
 

@@ -5,6 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
+using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Client.AppConfig;
 
@@ -32,25 +33,37 @@ internal class CacheIdentityClient : ICacheIdentityClient
     private CacheIdentityClient(Func<CancellationToken, Task<AuthenticationResult>> getToken)
         => _getToken = async (cancellationToken) => new TokenResult(await getToken.Invoke(cancellationToken).ConfigureAwait(false));
 
-    internal static ICacheIdentityClient CreateForManagedIdentity(AzureCacheOptions options)
+    internal static ICacheIdentityClient CreateForManagedIdentity(AzureCacheOptions options, ILogger? log)
     {
-        var clientApp = ManagedIdentityApplicationBuilder.Create(
-                  options.ClientId is null ?
-                      ManagedIdentityId.SystemAssigned
-                      : Guid.TryParse(options.ClientId, out _) ?
-                          ManagedIdentityId.WithUserAssignedClientId(options.ClientId)
-                          : ManagedIdentityId.WithUserAssignedResourceId(options.ClientId))
-                  .Build();
+        var clientAppBuilder = ManagedIdentityApplicationBuilder.Create(
+            options.ClientId is null ?
+                ManagedIdentityId.SystemAssigned
+                : Guid.TryParse(options.ClientId, out _) ?
+                    ManagedIdentityId.WithUserAssignedClientId(options.ClientId)
+                        : ManagedIdentityId.WithUserAssignedResourceId(options.ClientId));
+
+        if (log is not null)
+        {
+            clientAppBuilder = clientAppBuilder.WithLogging((level, message, containsPii) => IdentityLog(level, message, containsPii, log), Identity.Client.LogLevel.Warning, enablePiiLogging: false, enableDefaultPlatformLogging: false);
+        }
+
+        var clientApp = clientAppBuilder.Build();
 
         return new CacheIdentityClient(getToken: (cancellationToken) => clientApp.AcquireTokenForManagedIdentity(options.Scope).ExecuteAsync(cancellationToken));
     }
 
-    internal static ICacheIdentityClient CreateForServicePrincipal(AzureCacheOptions options)
+    internal static ICacheIdentityClient CreateForServicePrincipal(AzureCacheOptions options, ILogger? log)
     {
-        var clientApp = ConfidentialClientApplicationBuilder.Create(options.ClientId)
+        var clientAppBuilder = ConfidentialClientApplicationBuilder.Create(options.ClientId)
             .WithCloudAuthority(options)
-            .WithCredentials(options)
-            .Build();
+            .WithCredentials(options);
+
+        if (log is not null)
+        {
+            clientAppBuilder = clientAppBuilder.WithLogging((level, message, containsPii) => IdentityLog(level, message, containsPii, log), Identity.Client.LogLevel.Warning, enablePiiLogging: false, enableDefaultPlatformLogging: false);
+        }
+
+        var clientApp = clientAppBuilder.Build();
 
         return new CacheIdentityClient(getToken: (cancellationToken) => clientApp.AcquireTokenForClient(new[] { options.Scope }).ExecuteAsync(cancellationToken));
     }
@@ -64,6 +77,26 @@ internal class CacheIdentityClient : ICacheIdentityClient
 
     async Task<TokenResult> ICacheIdentityClient.GetTokenAsync(CancellationToken cancellationToken)
         => await _getToken.Invoke(cancellationToken).ConfigureAwait(false);
+
+    private static void IdentityLog(Identity.Client.LogLevel level, string message, bool containsPii, ILogger log)
+    {
+        if (containsPii)
+        {
+            return;
+        }
+
+        var logLevel = level switch
+        {
+            Identity.Client.LogLevel.Always => Extensions.Logging.LogLevel.Information,
+            Identity.Client.LogLevel.Error => Extensions.Logging.LogLevel.Error,
+            Identity.Client.LogLevel.Warning => Extensions.Logging.LogLevel.Warning,
+            Identity.Client.LogLevel.Info => Extensions.Logging.LogLevel.Information,
+            Identity.Client.LogLevel.Verbose => Extensions.Logging.LogLevel.Debug,
+            _ => Extensions.Logging.LogLevel.None
+        };
+
+        log.Log(logLevel, message);
+    }
 
 }
 
