@@ -80,11 +80,11 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                 throw new ArgumentException($"To use a service principal, {nameof(azureCacheOptions.ServicePrincipalSecret)} or {nameof(azureCacheOptions.ServicePrincipalCertificate)} must be specified");
             }
 
-            return CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions);
+            return CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions, _log);
         }
         else // Managed identity
         {
-            return CacheIdentityClient.CreateForManagedIdentity(azureCacheOptions);
+            return CacheIdentityClient.CreateForManagedIdentity(azureCacheOptions, _log);
         }
     }
 
