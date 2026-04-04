@@ -1,0 +1,48 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio related
+.vs/
+.vscode/
+*.sln.iml
+*.userprefs
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# User Secrets
+**/Properties/launchSettings.json
+appsettings.*.json
+!appsettings.Development.json
+!appsettings.json
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# dotnet cli cache
+.dotnet/
+
+# Rider
+.idea/
+*.sln.iml
+
+# macOS
+.DS_Store

@@ -12,11 +12,17 @@ builder.Services.AddSingleton<Redis>();
 var app = builder.Build();
 
 // Initialize Redis connection
-using (var scope = app.Services.CreateScope())
+var redis = app.Services.GetRequiredService<Redis>();
+
+try
 {
-    var redis = scope.ServiceProvider.GetRequiredService<Redis>();
-    var endpoint = app.Configuration.GetValue<string>("Redis:Endpoint") ?? string.Empty; // Value should be in the format "name.region.redis.azure.net:10000"
-    await redis.ConnectAsync(endpoint);
+    var redisEndpoint = app.Configuration.GetValue<string>("Redis:Endpoint") ?? throw new ArgumentNullException("Redis endpoint must be provided via configuration (Redis:Endpoint) in the format 'name.region.redis.azure.net:10000'.");
+    await redis.ConnectAsync(redisEndpoint);
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Failed to connect to Redis: {ex.Message}");
+    throw;
 }
 
 // Configure the HTTP request pipeline.

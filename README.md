@@ -71,8 +71,16 @@ The [sample](./sample) directory contains a project showing how to connect to an
 
 NOTE: The sample project uses a `<ProjectReference>` to the extension project in this repo. To run the project on its own using the released Microsoft.Azure.StackExchangeRedis NuGet package, replace the `<ProjectReference>` in `Microsoft.Azure.StackExchangeRedis.Sample.csproj` with a `<PackageReference>`.
 
-## ASP.NET sample
-For an example of how to use the asynchronous `ConfigureForAzure*()` methods to create a Redis connection in a dependency injection scenario like ASP.NET, see the [sample.aspnet](./sample.aspnet) directory. At a high level, this sample wraps the Redis connection in a singleton [Redis.cs](./sample.aspnet/Services/Redis.cs) service that's injected into components that need a Redis connection (e.g. [SampleController.cs](./sample.aspnet/Controllers/SampleController.cs)). During startup, code in the top-level [Program.cs](./sample.aspnet/Program.cs) resolves the Redis service singleton and awaits the async call to initialize it and create the Redis connection. 
+## ASP.NET samples
+The [ASP.NET_Samples](./ASP.NET_Samples) directory contains multiple samples demonstrating how to use this extension with ASP.NET applications:
+
+### ASP.NET Core samples
+- **[Direct](./ASP.NET_Samples/Direct)** - Shows how to use the asynchronous `ConfigureForAzure*()` methods to create a Redis connection in a dependency injection scenario. This sample wraps the Redis connection in a singleton [Redis.cs](./ASP.NET_Samples/Direct/Services/Redis.cs) service that's injected into components that need to use a StackExchange.Redis connection directly (e.g. [SampleController.cs](./ASP.NET_Samples/Direct/Controllers/SampleController.cs)). During startup, code in [Program.cs](./ASP.NET_Samples/Direct/Program.cs) resolves the Redis service singleton and awaits the async call to initialize it and create the Redis connection.
+- **[OutputCache](./ASP.NET_Samples/OutputCache)** - Demonstrates ASP.NET Core output caching backed by Azure Redis.
+- **[SessionState](./ASP.NET_Samples/SessionState)** - Demonstrates ASP.NET Core session state backed by Redis distributed caching.
+
+### ASP.NET Framework sample
+- **[ASP.NET_Framework/SessionState](./ASP.NET_Samples/ASP.NET_Framework/SessionState)** - Demonstrates custom session state caching using Azure Redis Cache in ASP.NET Framework 4.8, featuring distributed locking, JSON serialization, and complete session lifecycle management. This sample does not rely upon the deprecated Microsoft.Web.RedisSessionStateProvider
 
 ## Contributing
 Please read our [CONTRIBUTING.md](CONTRIBUTING.md) which outlines all of our policies, procedures, and requirements for contributing to this project.
