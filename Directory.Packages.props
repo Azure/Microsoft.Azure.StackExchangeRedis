@@ -3,7 +3,7 @@
     <!-- Packages that Microsoft.Azure.StackExchangeRedis depends on at runtime. Upgrades can create binding redirect pain in .NET Framework applications! -->
     <PackageVersion Include="Microsoft.Extensions.Azure" Version="1.13.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
-    <PackageVersion Include="StackExchange.Redis" Version="2.10.1" />
+    <PackageVersion Include="StackExchange.Redis" Version="2.12.14" />
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.15.0" />
     <!-- Packages used at build time or elsewhere in the solution. Upgrade at will. -->
     <PackageVersion Include="FakeItEasy" Version="8.3.0" />

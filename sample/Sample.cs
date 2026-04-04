@@ -30,10 +30,13 @@ ConfigurationOptions configurationOptions = new()
 
     // Fail fast for the purposes of this sample. In production code, AbortOnConnectFail should remain false to retry connections on startup.
     AbortOnConnectFail = true,
-
+    
     // Fail commands immediately when a connection isn't available, rather than backlogging them for execution when connection is restored.
     // This option is useful for exposing any connection drops for the sample, but production code should always use BacklogPolicy.Default for resilience.
     BacklogPolicy = BacklogPolicy.FailFast,
+
+    // Ensure we use the latest TLS 1.3 for security and compatibility with Azure Redis minimum supported version.
+    SslProtocols = System.Security.Authentication.SslProtocols.Tls13,
 };
 
 // NOTE: ConnectionMultiplexer instances should be as long-lived as possible.
@@ -125,7 +128,7 @@ switch (option)
         await configurationOptions.ConfigureForAzureWithServicePrincipalAsync(
             clientId!,
             tenantId!,
-            certificate: new X509Certificate2(certFilePath!, certPassword, X509KeyStorageFlags.EphemeralKeySet)!);
+            certificate: X509CertificateLoader.LoadPkcs12FromFile(certFilePath!, certPassword, X509KeyStorageFlags.EphemeralKeySet));
         break;
 
     case "6": // Service principal certificate with Subject Name + Issuer authentication (Microsoft internal use only)
@@ -145,7 +148,7 @@ switch (option)
         {
             ClientId = clientId!,
             ServicePrincipalTenantId = tenantId!,
-            ServicePrincipalCertificate = new X509Certificate2(certFilePath!, certPassword, X509KeyStorageFlags.EphemeralKeySet),
+            ServicePrincipalCertificate = X509CertificateLoader.LoadPkcs12FromFile(certFilePath!, certPassword, X509KeyStorageFlags.EphemeralKeySet),
             SendX5C = true // Enables Subject Name + Issuer authentication
         });
         break;
