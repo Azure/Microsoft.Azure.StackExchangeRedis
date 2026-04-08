@@ -197,6 +197,72 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     /// Acquires a token to authenticate connections to Azure Cache for Redis
     /// </summary>
     /// <param name="throwOnFailure"><see langword="true"/> to throw on failure, <see langword="false"/> to suppress handle exceptions and retry</param>
+    internal void AcquireToken(bool throwOnFailure)
+    {
+        TokenResult? tokenResult = null;
+        Exception? lastException = null;
+
+        for (var attemptCount = 0; attemptCount < _azureCacheOptions.MaxTokenRefreshAttempts; ++attemptCount)
+        {
+            // Cancel call to acquire token after 10+ seconds. Fail fast (10s) on initial call to evade a transient hang,
+            // then increase timeout on subsequent attempts in case it legitimately needs more time. 
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10 + (attemptCount * 5)));
+
+            try
+            {
+                _log?.LogTrace($"Requesting token...");
+                tokenResult = IdentityClient.GetToken(cts.Token);
+
+                break;
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                _log?.LogWarning(ex, $"Failed to acquire token on attempt {attemptCount + 1} of {_azureCacheOptions.MaxTokenRefreshAttempts}.");
+            }
+
+            Thread.Sleep(_azureCacheOptions.TokenRefreshBackoff.Invoke(attemptCount, lastException));
+
+        }
+
+        if (tokenResult is null)
+        {
+            _log?.LogError(lastException, $"Failed all {_azureCacheOptions.MaxTokenRefreshAttempts} attempts to acquire a new token. Current token expiry is {_tokenExpiry:s} UTC");
+            InvokeHandlerWithTimeout(() => TokenRefreshFailed?.Invoke(this, new(lastException, _tokenExpiry)), nameof(TokenRefreshFailed));
+
+            if (throwOnFailure && lastException is not null)
+            {
+                throw lastException;
+            }
+
+            return;
+        }
+
+        if (tokenResult.ExpiresOn.UtcDateTime <= _tokenExpiry)
+        {
+            _log?.LogInformation($"Received a token with an expiry of {tokenResult.ExpiresOn.UtcDateTime:s} UTC, which is not later than the current token's expiry of {_tokenExpiry:s} UTC. Most likely we got a copy of the current token from the local cache because it's not close enough to expiration to qualify for a refresh.");
+
+            return;
+        }
+
+        // Successfully acquired a fresh token
+        _tokenAcquiredTime = DateTime.UtcNow;
+        _token = tokenResult.Token;
+        _tokenExpiry = tokenResult.ExpiresOn.UtcDateTime;
+        if (_user is null)
+        {
+            // Extract user name from the first token acquired for an identity
+            _user = _azureCacheOptions.GetUserName(_token);
+            _log?.LogInformation($"Acquired token for identity with Object ID: '{_user}'");
+        }
+        _log?.LogInformation($"Acquired token with expiration: {tokenResult.ExpiresOn.UtcDateTime:s} UTC");
+        InvokeHandlerWithTimeout(() => TokenRefreshed?.Invoke(this, tokenResult), nameof(TokenRefreshed));
+    }
+
+    /// <summary>
+    /// Acquires a token to authenticate connections to Azure Cache for Redis
+    /// </summary>
+    /// <param name="throwOnFailure"><see langword="true"/> to throw on failure, <see langword="false"/> to suppress handle exceptions and retry</param>
     internal async Task AcquireTokenAsync(bool throwOnFailure)
     {
         TokenResult? tokenResult = null;
@@ -365,6 +431,31 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     }
 
     private static readonly TimeSpan HandlerTimeout = TimeSpan.FromSeconds(5);
+    private void InvokeHandlerWithTimeout(Action handler, string name)
+    {
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                handler.Invoke();
+            }
+            catch (Exception ex)
+            {
+                _log?.LogError(ex, $"Handler for {name} failed");
+            }
+        })
+        {
+            IsBackground = true
+        };
+
+        thread.Start();
+
+        if (!thread.Join(HandlerTimeout))
+        {
+            _log?.LogError($"Handler for {name} timed out after 5 seconds");
+        }
+    }
+
     private async Task InvokeHandlerWithTimeoutAsync(Action handler, string name)
     {
         try
