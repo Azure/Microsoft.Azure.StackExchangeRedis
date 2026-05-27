@@ -12,7 +12,7 @@
 
   <ItemGroup>
     <!-- Replace this <ProjectReference> with <PackageReference Include="Microsoft.Azure.StackExchangeRedis" /> to use the published NuGet package -->
-    <ProjectReference Include="..\src\Microsoft.Azure.StackExchangeRedis.csproj" />
+    <ProjectReference Include="..\..\src\Microsoft.Azure.StackExchangeRedis.csproj" />
   </ItemGroup>
 
 </Project>

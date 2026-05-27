@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.6.33309.430
+# Visual Studio Version 18
+VisualStudioVersion = 18.6.11716.218 insiders
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.StackExchangeRedis", "src\Microsoft.Azure.StackExchangeRedis.csproj", "{76734EC5-7D24-4D03-9085-576272A60CB4}"
 EndProject
@@ -9,7 +9,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.StackExchan
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.StackExchangeRedis.Sample", "sample\Microsoft.Azure.StackExchangeRedis.Sample.csproj", "{224E9946-CBC2-466B-BB07-EDCB711E3FFB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Azure.StackExchangeRedis.Sample.AspNet", "sample.aspnet\Microsoft.Azure.StackExchangeRedis.Sample.AspNet.csproj", "{79E7F91A-F680-042A-1D3E-5EF54990D327}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.Azure.StackExchangeRedis.Sample.AspNet", "ASP.NET_Samples\Direct\Microsoft.Azure.StackExchangeRedis.Sample.AspNet.csproj", "{79E7F91A-F680-042A-1D3E-5EF54990D327}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RedisSessionCache", "ASP.NET_Samples\SessionState\RedisSessionCache.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RedisOutputCache", "ASP.NET_Samples\OutputCache\RedisOutputCache.csproj", "{B2C3D4E5-F678-90AB-CDEF-123456789ABC}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{2A657F84-E9FF-42BC-B473-5C83FDA6DCBE}"
 	ProjectSection(SolutionItems) = preProject
@@ -50,6 +54,14 @@ Global
 		{79E7F91A-F680-042A-1D3E-5EF54990D327}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{79E7F91A-F680-042A-1D3E-5EF54990D327}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{79E7F91A-F680-042A-1D3E-5EF54990D327}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2C3D4E5-F678-90AB-CDEF-123456789ABC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2C3D4E5-F678-90AB-CDEF-123456789ABC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2C3D4E5-F678-90AB-CDEF-123456789ABC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2C3D4E5-F678-90AB-CDEF-123456789ABC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

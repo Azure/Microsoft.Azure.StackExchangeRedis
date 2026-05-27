@@ -1,10 +1,9 @@
-using Azure.Identity;
-using Microsoft.Azure.StackExchangeRedis;
+﻿using Azure.Identity;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var redisConfig = ConfigurationOptions.Parse(builder.Configuration["RedisConnectionString"]);
+var redisConfig = ConfigurationOptions.Parse(builder.Configuration["RedisConnectionString"]!);
 
 // Hook up StackExchange.Redis logging
 var redisLoggerFactory = LoggerFactory.Create(logging =>
