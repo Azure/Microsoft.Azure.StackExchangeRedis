@@ -14,9 +14,14 @@ var app = builder.Build();
 // Initialize Redis connection
 var redis = app.Services.GetRequiredService<Redis>();
 
+var redisEndpoint = app.Configuration.GetValue<string>("Redis:Endpoint");
+if (string.IsNullOrWhiteSpace(redisEndpoint))
+{
+    throw new InvalidOperationException("Redis endpoint must be provided via configuration (Redis:Endpoint) in the format 'name.region.redis.azure.net:10000'.");
+}
+
 try
 {
-    var redisEndpoint = app.Configuration.GetValue<string>("Redis:Endpoint") ?? throw new ArgumentNullException("Redis endpoint must be provided via configuration (Redis:Endpoint) in the format 'name.region.redis.azure.net:10000'.");
     await redis.ConnectAsync(redisEndpoint);
 }
 catch (Exception ex)

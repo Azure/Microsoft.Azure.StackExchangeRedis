@@ -1,5 +1,4 @@
-using Azure.Identity;
-using Microsoft.Azure.StackExchangeRedis;
+﻿using Azure.Identity;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
