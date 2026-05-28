@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 3.3.2
+- Update dependency package versions ([#91 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/91))
+
 ## 3.3.1
 - Get additional logging from the Microsoft Identity library ([#89 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/89))
 - Update dependency package versions to get a fix for a vulnerability ([#88 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/88)) to address [#85](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/85)
