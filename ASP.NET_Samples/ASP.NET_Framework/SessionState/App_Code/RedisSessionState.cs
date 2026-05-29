@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration;
@@ -8,6 +8,8 @@ using System.Web.SessionState;
 using Azure.Identity;
 using StackExchange.Redis;
 using Newtonsoft.Json;
+
+#pragma warning disable CS8600, CS8601, CS8603, CS8604, CS8618, CS8625
 
 namespace RedisSessionApp
 {

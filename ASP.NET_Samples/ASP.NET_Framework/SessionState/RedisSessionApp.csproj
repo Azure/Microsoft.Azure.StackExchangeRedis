@@ -14,7 +14,7 @@
     <RootNamespace>RedisSessionApp</RootNamespace>
     <AssemblyName>RedisSessionApp</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <LangVersion>6</LangVersion>
+    <LangVersion>latest</LangVersion>
     <UseIISExpress>true</UseIISExpress>
     <Use64BitIISExpress />
     <IISExpressSSLPort />

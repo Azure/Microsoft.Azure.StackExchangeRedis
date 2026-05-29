@@ -10,7 +10,7 @@
     <PackageProjectUrl>https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
 
-    <LangVersion>11</LangVersion>
+    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <NullableContextOptions>enable</NullableContextOptions>
     <RepositoryType>git</RepositoryType>
