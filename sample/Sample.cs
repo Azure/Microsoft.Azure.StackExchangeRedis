@@ -35,7 +35,7 @@ ConfigurationOptions configurationOptions = new()
     // This option is useful for exposing any connection drops for the sample, but production code should always use BacklogPolicy.Default for resilience.
     BacklogPolicy = BacklogPolicy.FailFast,
 
-    // Ensure we use the latest TLS 1.3 for security and compatibility with Azure Redis minimum supported version.
+    // TLS 1.3 is recommended unless your application environment doesn't support it. Azure Redis requires TLS 1.2+.
     SslProtocols = System.Security.Authentication.SslProtocols.Tls13,
 };
 

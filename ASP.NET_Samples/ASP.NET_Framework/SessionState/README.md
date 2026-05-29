@@ -48,6 +48,8 @@ Press F5 in Visual Studio and test session functionality on Default.aspx.
 - 33-56% faster than BinaryFormatter
 - ~50% smaller payload size
 - Easy debugging with Redis CLI
+- Limitation: Supports primitive/string/DateTime values only. Complex types must be serialized by the caller
+- Note that if any session data fails to serialize/deserialize the session will simply be replaced with null/empty
 
 ## Architecture
 
@@ -161,6 +163,7 @@ TTL RedisSessionApp:session:abc123:lock
 - Check Redis connectivity
 - Verify timeout settings
 - Use Redis CLI to check if keys exist
+- Ensure that session data is serializing/deserializing successfully. If exceptions are encountered, data is simply replaced with null/empty
 
 **Lock Contention:**
 - Increase LOCK_RETRY_MAX
