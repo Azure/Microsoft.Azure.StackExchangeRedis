@@ -83,6 +83,19 @@ public static class AzureCacheForRedis
     /// </summary>
     /// <param name="configurationOptions">The configuration to update.</param>
     /// <param name="tokenCredential">The TokenCredential to be used.</param>
+    public static ConfigurationOptions ConfigureForAzureWithTokenCredential(this ConfigurationOptions configurationOptions, TokenCredential tokenCredential)
+        => ConfigureForAzureSync(
+            configurationOptions,
+            new AzureCacheOptions()
+            {
+                TokenCredential = tokenCredential
+            });
+
+    /// <summary>
+    /// Configures a Redis connection authenticated using a TokenCredential.
+    /// </summary>
+    /// <param name="configurationOptions">The configuration to update.</param>
+    /// <param name="tokenCredential">The TokenCredential to be used.</param>
     public static async Task<ConfigurationOptions> ConfigureForAzureWithTokenCredentialAsync(this ConfigurationOptions configurationOptions, TokenCredential tokenCredential)
         => await ConfigureForAzureAsync(
             configurationOptions,
@@ -90,6 +103,37 @@ public static class AzureCacheForRedis
             {
                 TokenCredential = tokenCredential
             }).ConfigureAwait(false);
+
+    /// <summary>
+    /// Configures a connection to an Azure Cache for Redis using advanced options.
+    /// </summary>
+    /// <param name="configurationOptions">The configuration to update.</param>
+    /// <param name="azureCacheOptions">Options for configuring a connection to an Azure Cache for Redis.</param>
+    /// <exception cref="MsalServiceException">When the token source is not supported or identified incorrectly.</exception>
+    /// <exception cref="HttpRequestException">Unable to contact the identity service to acquire a token.</exception>
+    public static ConfigurationOptions ConfigureForAzureSync(
+        this ConfigurationOptions configurationOptions,
+        AzureCacheOptions azureCacheOptions)
+    {
+        var optionsProvider = new AzureCacheOptionsProviderWithToken(azureCacheOptions, configurationOptions.LoggerFactory);
+
+        try
+        {
+            // Log diagnostic details from Azure Identity as it attempts to acquire the initial token
+            using var azureEventSourceLogForwarder = new AzureEventSourceLogForwarder(configurationOptions.LoggerFactory);
+            azureEventSourceLogForwarder.Start();
+
+            optionsProvider.AcquireToken(throwOnFailure: true);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to acquire token", ex);
+        }
+
+        configurationOptions.Defaults = optionsProvider;
+
+        return configurationOptions;
+    }
 
     /// <summary>
     /// Configures a connection to an Azure Cache for Redis using advanced options.
