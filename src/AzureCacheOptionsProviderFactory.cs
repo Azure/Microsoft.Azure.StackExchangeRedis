@@ -10,10 +10,9 @@ internal static class AzureCacheOptionsProviderFactory
 {
     internal static DefaultOptionsProvider CreateDefaultsForAccessKey(EndPointCollection endPoints)
     {
-        var managedRedisOptionsProvider = new AzureManagedRedisCacheOptionsProvider();
-        if (managedRedisOptionsProvider.IsAzureManagedRedisEndpoint(endPoints))
+        if (IsAzureManagedRedisEndpoint(endPoints))
         {
-            return managedRedisOptionsProvider;
+            return new AzureManagedRedisCacheOptionsProvider();
         }
 
         return new AzureCacheOptionsProvider();
@@ -21,17 +20,18 @@ internal static class AzureCacheOptionsProviderFactory
 
     internal static DefaultOptionsProvider CreateDefaultsWithToken(EndPointCollection endPoints, RedisTokenAuthenticationManager tokenAuthenticationManager)
     {
-        var managedRedisOptionsProvider = new AzureManagedRedisCacheOptionsProviderWithToken(tokenAuthenticationManager);
-        if (managedRedisOptionsProvider.IsAzureManagedRedisEndpoint(endPoints))
+        if (IsAzureManagedRedisEndpoint(endPoints))
         {
-            return managedRedisOptionsProvider;
+            return new AzureManagedRedisCacheOptionsProviderWithToken(tokenAuthenticationManager);
         }
 
         return new AzureCacheOptionsProviderWithToken(tokenAuthenticationManager);
     }
 
-    private static bool IsAzureManagedRedisEndpoint(this AzureManagedRedisCacheOptionsProvider managedRedisOptionsProvider, EndPointCollection endPoints)
+    private static bool IsAzureManagedRedisEndpoint(EndPointCollection endPoints)
     {
+        var managedRedisOptionsProvider = new AzureManagedRedisCacheOptionsProvider();
+
         foreach (var endPoint in endPoints)
         {
             if (managedRedisOptionsProvider.IsMatch(endPoint))
