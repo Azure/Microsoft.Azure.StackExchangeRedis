@@ -55,6 +55,35 @@ public class AzureCacheOptionsProviderTests
     }
 
     [DataTestMethod]
+    [DataRow("cache.northeurope.redis.azure.net:10000")]
+    [DataRow("cache.redis.cache.windows.net:10000")]
+    [DataRow("redis.example.com:10000")]
+    [DataRow("127.0.0.1:10000")]
+    [DataRow("")]
+    [DataRow("127.0.0.1:10000,cache.northeurope.redis.azure.net:10000")]
+    [DataRow("cache.redis.cache.windows.net:10000,cache.northeurope.redis.azure.net:10000")]
+    public void Factory_RegistersOnlySelectedTokenProviderEventHandlers(string endpoints)
+    {
+        var options = endpoints.Length == 0 ? new ConfigurationOptions() : ConfigurationOptions.Parse(endpoints);
+        var manager = new RedisTokenAuthenticationManager(CreateAzureOptions(), null);
+
+        var provider = AzureCacheOptionsProviderFactory.CreateDefaultsWithToken(options.EndPoints, manager);
+
+        // Event delivery alone cannot reveal a discarded wrapper retained by the manager.
+        foreach (var tokenEvent in typeof(IAzureCacheTokenEvents).GetEvents())
+        {
+            var field = typeof(RedisTokenAuthenticationManager).GetField(
+                tokenEvent.Name, BindingFlags.NonPublic | BindingFlags.Instance);
+            Assert.IsNotNull(field, tokenEvent.Name);
+            var handlers = (Delegate?)field!.GetValue(manager);
+            Assert.IsNotNull(handlers, tokenEvent.Name);
+            var subscriptions = handlers!.GetInvocationList();
+            Assert.AreEqual(1, subscriptions.Length, tokenEvent.Name);
+            Assert.AreSame(provider, subscriptions[0].Target, tokenEvent.Name);
+        }
+    }
+
+    [DataTestMethod]
     [DataRow("cache.northeurope.redis.azure.net", true)]
     [DataRow("CACHE.NORTHEUROPE.REDIS.AZURE.NET", true)]
     [DataRow("cache.privatelink.redis.azure.net", true)]
