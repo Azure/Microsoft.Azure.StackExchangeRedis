@@ -6,10 +6,24 @@ Tags: Redis,Cache,StackExchange.Redis,Microsoft,Azure
 ---
 
 # Microsoft.Azure.StackExchangeRedis Extension
-The Microsoft.Azure.StackExchangeRedis package is an extension for the StackExchange.Redis client library that enables using Microsoft Entra ID to authenticate connections from a Redis client application to an Azure Cache for Redis resource. This extension acquires an access token for an Azure [managed identity](https://learn.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview), [service principal](https://learn.microsoft.com/azure/active-directory/develop/app-objects-and-service-principals), or user and configures a StackExchange.Redis connection to use the token for authentication. Before the token expires, it acquires a fresh token and re-authenticates the connection to maintain uninterrupted communication with the cache indefinitely. 
+The Microsoft.Azure.StackExchangeRedis package is an extension for the StackExchange.Redis client library that enables using Microsoft Entra ID to authenticate connections from a Redis client application to an Azure Cache for Redis or Azure Managed Redis resource. This extension acquires an access token for an Azure [managed identity](https://learn.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview), [service principal](https://learn.microsoft.com/azure/active-directory/develop/app-objects-and-service-principals), or user and configures a StackExchange.Redis connection to use the token for authentication. Before the token expires, it acquires a fresh token and re-authenticates the connection to maintain uninterrupted communication with the cache indefinitely.
+
+### Azure Managed Redis
+The existing `ConfigureForAzure` access-key configuration action and all asynchronous `ConfigureForAzure*` authentication methods also support Azure Managed Redis, including user-assigned managed identity authentication. When configuration is applied, the factory selects Azure Managed Redis providers if any configured endpoint matches StackExchange.Redis's native `AzureManagedRedisOptionsProvider`, including `.redis.azure.net` and `.redisenterprise.cache.azure.net`. Otherwise, it selects Azure Cache for Redis providers, preserving legacy behavior for custom DNS aliases, IP addresses, and empty endpoint collections.
+
+The selected providers inherit the corresponding native StackExchange.Redis defaults and connection hooks. For Azure Managed Redis, these defaults include TLS, RESP3, a Redis 7.4 version assumption, and no configuration-channel subscription. Its native connection hook does not subscribe to `AzureRedisEvents`. Explicit configuration settings take precedence over these defaults. Application pub/sub remains available; the extension does not disable the `SUBSCRIBE` command.
+
+The factory selects one of four internal provider types:
+
+| Service | Access-key provider | Entra ID provider |
+| --- | --- | --- |
+| Azure Cache for Redis | `AzureCacheOptionsProvider` | `AzureCacheOptionsProviderWithToken` |
+| Azure Managed Redis | `AzureManagedRedisCacheOptionsProvider` | `AzureManagedRedisCacheOptionsProviderWithToken` |
+
+Both Entra ID providers are thin wrappers around a shared `TokenOptionsProvider`, which manages token acquisition, refresh, connection tracking, and re-authentication. They retain their service-specific native connection hooks and relay authentication events with the selected wrapper as the event sender. Access-key providers use the supplied credentials without token lifecycle management.
 
 ### Subscription connections
-With the default RESP2 protocol, StackExchange.Redis actually creates two connections behind the scenes: an "interactive" connection for normal Redis commands (GET, SET, etc.), plus a "subscription" connection for [pub/sub](https://redis.io/glossary/pub-sub/) messages. The interactive connection is the one that's proactively re-authenticated with fresh tokens, while the subscription connection cannot be re-authenticated. When using RESP2 you will see subscription connections being closed by the Redis server when their token expires, and then immediately restored by StackExchange.Redis using a current token. To avoid these interruptions, we recommend using the RESP3 protocol which bundles all traffic (interactive and pub/sub) on a single connection to Redis, which will be proactively re-authenticated. Opt in to RESP3 by specifying `protocol=resp3` in the connection string, or by setting `configurationOptions.Protocol = RedisProtocol.Resp3` as shown in [sample/Sample.cs](./sample/Sample.cs). If RESP2 is used, it's expected to see "MicrosoftEntraTokenExpired" in Redis error metrics due to the subscription connections.
+When using RESP2, StackExchange.Redis creates separate connections for normal Redis commands (GET, SET, etc.) and [pub/sub](https://redis.io/glossary/pub-sub/) messages when subscriptions are needed. With Entra ID authentication, the interactive connection is the one that's proactively re-authenticated with fresh tokens, while the subscription connection cannot be re-authenticated. When using RESP2 you will see subscription connections being closed by the Redis server when their token expires, and then immediately restored by StackExchange.Redis using a current token. To avoid these interruptions, we recommend using the RESP3 protocol which bundles all traffic (interactive and pub/sub) on a single connection to Redis, which will be proactively re-authenticated. Azure Managed Redis providers already default to RESP3. For other endpoints, opt in to RESP3 by specifying `protocol=resp3` in the connection string, or by setting `configurationOptions.Protocol = RedisProtocol.Resp3` as shown in [sample/Sample.cs](./sample/Sample.cs). If RESP2 is used with Entra ID authentication and subscriptions, it's expected to see "MicrosoftEntraTokenExpired" in Redis error metrics due to the subscription connections.
 
 ## Usage
 See [sample/Sample.cs](./sample/Sample.cs) for detailed examples of how to use the extension for all supported authentication scenarios.
@@ -18,13 +32,13 @@ High level instructions:
 
 1. Add a reference to the [Microsoft.Azure.StackExchangeRedis](https://www.nuget.org/packages/Microsoft.Azure.StackExchangeRedis) NuGet package in your Redis client project.
 
-2. In your Redis connection code, first create a `ConfigurationOptions` instance. You can use the `.Parse()` method to create an instance from a Redis connection string or the cache host name alone.
+2. In your Redis connection code, first create a `ConfigurationOptions` instance using the endpoint and port supplied by your Redis resource. Populate the endpoints before calling a configuration method so the factory can select the appropriate service provider.
 
 ```csharp
-var configurationOptions = ConfigurationOptions.Parse($"{cacheHostName}:6380");
+var configurationOptions = ConfigurationOptions.Parse($"{cacheHostName}:{cachePort}");
 ```
 
-3. Use one of the _ConfigureForAzure*_ extension methods supplied by this package to configure the authentication options:
+3. For Microsoft Entra ID authentication, use one of the asynchronous _ConfigureForAzure*_ extension methods supplied by this package:
 
 ```csharp
 // DefaultAzureCredential
@@ -50,6 +64,13 @@ await configurationOptions.ConfigureForAzureAsync(new AzureCacheOptions
     ServicePrincipalCertificate = certificate,
     SendX5C = true // Enables Subject Name + Issuer authentication
 });
+```
+
+For access-key authentication instead, supply the password and apply the synchronous configuration action:
+
+```csharp
+configurationOptions.Password = accessKey;
+AzureCacheForRedis.ConfigureForAzure(configurationOptions);
 ```
 
 4. Create the connection, passing in the `ConfigurationOptions` instance

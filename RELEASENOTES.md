@@ -1,6 +1,9 @@
 # Release Notes
 
 ## Unreleased
+- Select service-specific providers through a factory for `ConfigureForAzure` access-key configuration and all asynchronous `ConfigureForAzure*` authentication methods. Any recognized Azure Managed Redis endpoint selects AMR providers; otherwise, retain Azure Cache for Redis behavior.
+- Inherit native Azure Managed Redis defaults and connection behavior, including TLS, RESP3, and no automatic configuration-channel or `AzureRedisEvents` subscriptions. Preserve explicit configuration overrides and application pub/sub.
+- Share token acquisition, refresh, connection tracking, and re-authentication in `TokenOptionsProvider` between the two Entra ID provider wrappers, preserving the selected wrapper as the authentication-event sender.
 
 ## 3.4.0
 - Update dependency package versions ([#91 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/91))
