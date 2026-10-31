@@ -29,9 +29,9 @@ public class AzureCacheOptionsProviderTests
             accessKeyProvider.GetType());
 
         var azureOptions = CreateAzureOptions();
-        var tokenOptionsProvider = new TokenOptionsProvider(azureOptions, null);
-        await tokenOptionsProvider.AcquireTokenAsync(throwOnFailure: true);
-        var provider = AzureCacheOptionsProviderFactory.CreateDefaultsWithToken(options.EndPoints, tokenOptionsProvider);
+        var tokenAuthenticationManager = new RedisTokenAuthenticationManager(azureOptions, null);
+        await tokenAuthenticationManager.AcquireTokenAsync(throwOnFailure: true);
+        var provider = AzureCacheOptionsProviderFactory.CreateDefaultsWithToken(options.EndPoints, tokenAuthenticationManager);
         Assert.AreEqual(
             managedRedis ? typeof(AzureManagedRedisCacheOptionsProviderWithToken) : typeof(AzureCacheOptionsProviderWithToken),
             provider.GetType());
@@ -45,7 +45,7 @@ public class AzureCacheOptionsProviderTests
             refreshes++;
         };
 
-        await tokenOptionsProvider.AcquireTokenAsync(throwOnFailure: true);
+        await tokenAuthenticationManager.AcquireTokenAsync(throwOnFailure: true);
 
         Assert.AreEqual("token-2", provider.Password);
         Assert.AreSame(provider, eventSender);

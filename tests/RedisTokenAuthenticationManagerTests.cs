@@ -11,7 +11,7 @@ using StackExchange.Redis.Configuration;
 namespace Microsoft.Azure.StackExchangeRedis.Tests;
 
 [TestClass]
-public class TokenOptionsProviderTests
+public class RedisTokenAuthenticationManagerTests
 {
     [DataTestMethod]
     [DataRow(false, false)]
@@ -20,7 +20,7 @@ public class TokenOptionsProviderTests
     [DataRow(true, true)]
     public void Providers_PreserveNativeDefaults(bool managedRedis, bool withToken)
     {
-        var tokenProvider = new TokenOptionsProvider(CreateOptions(), null);
+        var tokenProvider = new RedisTokenAuthenticationManager(CreateOptions(), null);
         DefaultOptionsProvider provider = withToken
             ? CreateWrapper(managedRedis, tokenProvider)
             : managedRedis ? new AzureManagedRedisCacheOptionsProvider() : new AzureCacheOptionsProvider();
@@ -61,7 +61,7 @@ public class TokenOptionsProviderTests
             backoffAttempts.Add(attempt);
             return TimeSpan.Zero;
         };
-        var provider = new TokenOptionsProvider(options, null);
+        var provider = new RedisTokenAuthenticationManager(options, null);
         var identity = A.Fake<ICacheIdentityClient>();
         provider.IdentityClient = identity;
         var attempts = 0;
@@ -81,7 +81,7 @@ public class TokenOptionsProviderTests
     [TestMethod]
     public async Task AcquireTokenAsync_DoesNotReplaceTokenWithEarlierExpiry()
     {
-        var provider = new TokenOptionsProvider(CreateOptions(), null);
+        var provider = new RedisTokenAuthenticationManager(CreateOptions(), null);
         var identity = A.Fake<ICacheIdentityClient>();
         provider.IdentityClient = identity;
         var attempts = 0;
@@ -105,7 +105,7 @@ public class TokenOptionsProviderTests
     {
         var options = CreateOptions();
         options.MaxTokenRefreshAttempts = 1;
-        var tokenProvider = new TokenOptionsProvider(options, null);
+        var tokenProvider = new RedisTokenAuthenticationManager(options, null);
         var identity = A.Fake<ICacheIdentityClient>();
         tokenProvider.IdentityClient = identity;
         var failure = new InvalidOperationException("Token acquisition failed");
@@ -142,7 +142,7 @@ public class TokenOptionsProviderTests
     [DataRow(true, true)]
     public async Task TokenWrappers_RefreshExpiredPasswordAndReauthenticateConnections(bool managedRedis, bool failReauthentication)
     {
-        var tokenProvider = new TokenOptionsProvider(CreateOptions(), null);
+        var tokenProvider = new RedisTokenAuthenticationManager(CreateOptions(), null);
         var identity = A.Fake<ICacheIdentityClient>();
         tokenProvider.IdentityClient = identity;
         var attempts = 0;
@@ -185,7 +185,7 @@ public class TokenOptionsProviderTests
     [TestMethod]
     public async Task AfterConnectAsync_AwaitsProviderSpecificHook()
     {
-        var provider = new TokenOptionsProvider(CreateOptions(), null);
+        var provider = new RedisTokenAuthenticationManager(CreateOptions(), null);
         var connection = A.Fake<IConnectionMultiplexer>();
         var hook = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -199,7 +199,7 @@ public class TokenOptionsProviderTests
     [TestMethod]
     public async Task AfterConnectAsync_ContainsProviderSpecificHookFailures()
     {
-        var provider = new TokenOptionsProvider(CreateOptions(), null);
+        var provider = new RedisTokenAuthenticationManager(CreateOptions(), null);
 
         await provider.AfterConnectAsync(A.Fake<IConnectionMultiplexer>(),
             () => Task.FromException(new InvalidOperationException("Connection hook failed")));
@@ -213,7 +213,7 @@ public class TokenOptionsProviderTests
         TokenRefreshBackoff = (_, _) => TimeSpan.Zero
     };
 
-    private static DefaultOptionsProvider CreateWrapper(bool managedRedis, TokenOptionsProvider tokenProvider)
+    private static DefaultOptionsProvider CreateWrapper(bool managedRedis, RedisTokenAuthenticationManager tokenProvider)
         => managedRedis
             ? new AzureManagedRedisCacheOptionsProviderWithToken(tokenProvider)
             : new AzureCacheOptionsProviderWithToken(tokenProvider);

@@ -12,15 +12,15 @@ namespace Microsoft.Azure.StackExchangeRedis;
 /// </summary>
 internal class AzureManagedRedisCacheOptionsProviderWithToken : AzureManagedRedisCacheOptionsProvider, IAzureCacheTokenEvents
 {
-    private readonly TokenOptionsProvider _tokenOptionsProvider;
+    private readonly RedisTokenAuthenticationManager _tokenAuthenticationManager;
 
-    internal AzureManagedRedisCacheOptionsProviderWithToken(TokenOptionsProvider tokenOptionsProvider)
+    internal AzureManagedRedisCacheOptionsProviderWithToken(RedisTokenAuthenticationManager tokenAuthenticationManager)
     {
-        _tokenOptionsProvider = tokenOptionsProvider ?? throw new ArgumentNullException(nameof(tokenOptionsProvider));
-        _tokenOptionsProvider.TokenRefreshed += (_, args) => TokenRefreshed?.Invoke(this, args);
-        _tokenOptionsProvider.TokenRefreshFailed += (_, args) => TokenRefreshFailed?.Invoke(this, args);
-        _tokenOptionsProvider.ConnectionReauthenticated += (_, args) => ConnectionReauthenticated?.Invoke(this, args);
-        _tokenOptionsProvider.ConnectionReauthenticationFailed += (_, args) => ConnectionReauthenticationFailed?.Invoke(this, args);
+        _tokenAuthenticationManager = tokenAuthenticationManager ?? throw new ArgumentNullException(nameof(tokenAuthenticationManager));
+        _tokenAuthenticationManager.TokenRefreshed += (_, args) => TokenRefreshed?.Invoke(this, args);
+        _tokenAuthenticationManager.TokenRefreshFailed += (_, args) => TokenRefreshFailed?.Invoke(this, args);
+        _tokenAuthenticationManager.ConnectionReauthenticated += (_, args) => ConnectionReauthenticated?.Invoke(this, args);
+        _tokenAuthenticationManager.ConnectionReauthenticationFailed += (_, args) => ConnectionReauthenticationFailed?.Invoke(this, args);
     }
 
     /// <summary>
@@ -32,10 +32,10 @@ internal class AzureManagedRedisCacheOptionsProviderWithToken : AzureManagedRedi
     /// The username used to authenticate with the server. 
     /// For Entra ID authentication, this should be the Object ID of the identity used to acquire the token.
     /// </summary>
-    public override string? User => _tokenOptionsProvider.User;
+    public override string? User => _tokenAuthenticationManager.User;
 
     /// <inheritdoc/>
-    public override string? Password => _tokenOptionsProvider.Password;
+    public override string? Password => _tokenAuthenticationManager.Password;
 
     /// <inheritdoc/>
     public event EventHandler<TokenResult>? TokenRefreshed;
@@ -51,6 +51,6 @@ internal class AzureManagedRedisCacheOptionsProviderWithToken : AzureManagedRedi
 
     /// <inheritdoc/>
     public override Task AfterConnectAsync(ConnectionMultiplexer connectionMultiplexer, Action<string> log)
-        => _tokenOptionsProvider.AfterConnectAsync(
+        => _tokenAuthenticationManager.AfterConnectAsync(
             connectionMultiplexer, () => base.AfterConnectAsync(connectionMultiplexer, log));
 }

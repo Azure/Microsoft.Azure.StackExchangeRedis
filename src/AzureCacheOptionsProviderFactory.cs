@@ -19,15 +19,15 @@ internal static class AzureCacheOptionsProviderFactory
         return new AzureCacheOptionsProvider();
     }
 
-    internal static DefaultOptionsProvider CreateDefaultsWithToken(EndPointCollection endPoints, TokenOptionsProvider tokenOptionsProvider)
+    internal static DefaultOptionsProvider CreateDefaultsWithToken(EndPointCollection endPoints, RedisTokenAuthenticationManager tokenAuthenticationManager)
     {
-        var managedRedisOptionsProvider = new AzureManagedRedisCacheOptionsProviderWithToken(tokenOptionsProvider);
+        var managedRedisOptionsProvider = new AzureManagedRedisCacheOptionsProviderWithToken(tokenAuthenticationManager);
         if (managedRedisOptionsProvider.IsAzureManagedRedisEndpoint(endPoints))
         {
             return managedRedisOptionsProvider;
         }
 
-        return new AzureCacheOptionsProviderWithToken(tokenOptionsProvider);
+        return new AzureCacheOptionsProviderWithToken(tokenAuthenticationManager);
     }
 
     private static bool IsAzureManagedRedisEndpoint(this AzureManagedRedisCacheOptionsProvider managedRedisOptionsProvider, EndPointCollection endPoints)

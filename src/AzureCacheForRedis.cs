@@ -102,7 +102,7 @@ public static class AzureCacheForRedis
         this ConfigurationOptions configurationOptions,
         AzureCacheOptions azureCacheOptions)
     {
-        var tokenOpetionsProvider = new TokenOptionsProvider(azureCacheOptions, configurationOptions.LoggerFactory);
+        var tokenAuthenticationManager = new RedisTokenAuthenticationManager(azureCacheOptions, configurationOptions.LoggerFactory);
 
         try
         {
@@ -110,14 +110,14 @@ public static class AzureCacheForRedis
             using var azureEventSourceLogForwarder = new AzureEventSourceLogForwarder(configurationOptions.LoggerFactory);
             azureEventSourceLogForwarder.Start();
             
-            await tokenOpetionsProvider.AcquireTokenAsync(throwOnFailure: true).ConfigureAwait(false);
+            await tokenAuthenticationManager.AcquireTokenAsync(throwOnFailure: true).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             throw new Exception($"Failed to acquire token", ex);
         }
 
-        var optionsProvider = AzureCacheOptionsProviderFactory.CreateDefaultsWithToken(configurationOptions.EndPoints, tokenOpetionsProvider);
+        var optionsProvider = AzureCacheOptionsProviderFactory.CreateDefaultsWithToken(configurationOptions.EndPoints, tokenAuthenticationManager);
         configurationOptions.Defaults = optionsProvider;
         return configurationOptions;
     }

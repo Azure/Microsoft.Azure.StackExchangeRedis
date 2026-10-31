@@ -12,15 +12,15 @@ namespace Microsoft.Azure.StackExchangeRedis;
 /// </summary>
 internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, IAzureCacheTokenEvents
 {
-    private readonly TokenOptionsProvider _tokenOptionsProvider;
+    private readonly RedisTokenAuthenticationManager _tokenAuthenticationManager;
 
-    internal AzureCacheOptionsProviderWithToken(TokenOptionsProvider tokenOptionsProvider)
+    internal AzureCacheOptionsProviderWithToken(RedisTokenAuthenticationManager tokenAuthenticationManager)
     {
-        _tokenOptionsProvider = tokenOptionsProvider ?? throw new ArgumentNullException(nameof(tokenOptionsProvider));
-        _tokenOptionsProvider.TokenRefreshed += (_, args) => TokenRefreshed?.Invoke(this, args);
-        _tokenOptionsProvider.TokenRefreshFailed += (_, args) => TokenRefreshFailed?.Invoke(this, args);
-        _tokenOptionsProvider.ConnectionReauthenticated += (_, args) => ConnectionReauthenticated?.Invoke(this, args);
-        _tokenOptionsProvider.ConnectionReauthenticationFailed += (_, args) => ConnectionReauthenticationFailed?.Invoke(this, args);
+        _tokenAuthenticationManager = tokenAuthenticationManager ?? throw new ArgumentNullException(nameof(tokenAuthenticationManager));
+        _tokenAuthenticationManager.TokenRefreshed += (_, args) => TokenRefreshed?.Invoke(this, args);
+        _tokenAuthenticationManager.TokenRefreshFailed += (_, args) => TokenRefreshFailed?.Invoke(this, args);
+        _tokenAuthenticationManager.ConnectionReauthenticated += (_, args) => ConnectionReauthenticated?.Invoke(this, args);
+        _tokenAuthenticationManager.ConnectionReauthenticationFailed += (_, args) => ConnectionReauthenticationFailed?.Invoke(this, args);
     }
 
     /// <summary>
@@ -29,10 +29,10 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     public override bool GetDefaultSsl(EndPointCollection _) => true;
 
     /// <inheritdoc/>
-    public override string? User => _tokenOptionsProvider.User;
+    public override string? User => _tokenAuthenticationManager.User;
 
     /// <inheritdoc/>
-    public override string? Password => _tokenOptionsProvider.Password;
+    public override string? Password => _tokenAuthenticationManager.Password;
 
     /// <inheritdoc/>
     public event EventHandler<TokenResult>? TokenRefreshed;
@@ -48,6 +48,6 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
     /// <inheritdoc/>
     public override Task AfterConnectAsync(ConnectionMultiplexer connectionMultiplexer, Action<string> log)
-        => _tokenOptionsProvider.AfterConnectAsync(
+        => _tokenAuthenticationManager.AfterConnectAsync(
             connectionMultiplexer, () => base.AfterConnectAsync(connectionMultiplexer, log));
 }

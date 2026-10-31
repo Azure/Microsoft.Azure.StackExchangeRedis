@@ -39,13 +39,13 @@ public class AzureCacheOptionsProviderWithTokenTests
             GetUserName = (token) => "user",
             TokenHeartbeatInterval = TimeSpan.FromHours(1)
         };
-        var tokenOptionsProvider = new TokenOptionsProvider(azureCacheOptions, configurationOptions.LoggerFactory)
+        var tokenAuthenticationManager = new RedisTokenAuthenticationManager(azureCacheOptions, configurationOptions.LoggerFactory)
         {
             IdentityClient = fakeIdentityClient
         };
         DefaultOptionsProvider optionsProviderWithToken = managedRedis
-            ? new AzureManagedRedisCacheOptionsProviderWithToken(tokenOptionsProvider)
-            : new AzureCacheOptionsProviderWithToken(tokenOptionsProvider);
+            ? new AzureManagedRedisCacheOptionsProviderWithToken(tokenAuthenticationManager)
+            : new AzureCacheOptionsProviderWithToken(tokenAuthenticationManager);
 
         var fakeTokenRefreshedHandler = A.Fake<EventHandler<TokenResult>>();
         ((IAzureCacheTokenEvents)optionsProviderWithToken).TokenRefreshed += fakeTokenRefreshedHandler;
@@ -53,7 +53,7 @@ public class AzureCacheOptionsProviderWithTokenTests
         configurationOptions!.Defaults = optionsProviderWithToken;
 
         // Execute
-        await tokenOptionsProvider.AcquireTokenAsync(throwOnFailure: true);
+        await tokenAuthenticationManager.AcquireTokenAsync(throwOnFailure: true);
 
         // Assert
         A.CallTo(() => fakeTokenRefreshedHandler.Invoke(optionsProviderWithToken, A<TokenResult>._)).MustHaveHappenedOnceExactly();
@@ -81,13 +81,13 @@ public class AzureCacheOptionsProviderWithTokenTests
             GetUserName = (token) => "user",
             TokenHeartbeatInterval = TimeSpan.FromHours(1)
         };
-        var tokenOptionsProvider = new TokenOptionsProvider(azureCacheOptions, configurationOptions.LoggerFactory)
+        var tokenAuthenticationManager = new RedisTokenAuthenticationManager(azureCacheOptions, configurationOptions.LoggerFactory)
         {
             IdentityClient = fakeTokenCredentialClient
         };
         DefaultOptionsProvider optionsProviderWithToken = managedRedis
-            ? new AzureManagedRedisCacheOptionsProviderWithToken(tokenOptionsProvider)
-            : new AzureCacheOptionsProviderWithToken(tokenOptionsProvider);
+            ? new AzureManagedRedisCacheOptionsProviderWithToken(tokenAuthenticationManager)
+            : new AzureCacheOptionsProviderWithToken(tokenAuthenticationManager);
 
         var fakeTokenRefreshedHandler = A.Fake<EventHandler<TokenResult>>();
         ((IAzureCacheTokenEvents)optionsProviderWithToken).TokenRefreshed += fakeTokenRefreshedHandler;
@@ -95,7 +95,7 @@ public class AzureCacheOptionsProviderWithTokenTests
         configurationOptions.Defaults = optionsProviderWithToken;
 
         //Execute
-        await tokenOptionsProvider.AcquireTokenAsync(throwOnFailure: true);
+        await tokenAuthenticationManager.AcquireTokenAsync(throwOnFailure: true);
 
         //Assert
         A.CallTo(() => fakeTokenRefreshedHandler.Invoke(optionsProviderWithToken, A<TokenResult>._)).MustHaveHappenedOnceExactly();

@@ -14,7 +14,7 @@ namespace Microsoft.Azure.StackExchangeRedis;
 /// <summary>
 /// Manages Microsoft Entra ID tokens and connection re-authentication for Azure Redis options providers.
 /// </summary>
-internal class TokenOptionsProvider : IAzureCacheTokenEvents
+internal class RedisTokenAuthenticationManager : IAzureCacheTokenEvents
 {
     internal ICacheIdentityClient IdentityClient; // internal so unit tests can inject a fake
 
@@ -30,12 +30,12 @@ internal class TokenOptionsProvider : IAzureCacheTokenEvents
     private int _nextConnectionId = 0;
     private readonly ILogger? _log;
 
-    internal TokenOptionsProvider(
+    internal RedisTokenAuthenticationManager(
         AzureCacheOptions azureCacheOptions,
         ILoggerFactory? loggerFactory)
     {
         _azureCacheOptions = azureCacheOptions;
-        _log = loggerFactory?.CreateLogger<TokenOptionsProvider>();
+        _log = loggerFactory?.CreateLogger<RedisTokenAuthenticationManager>();
 
         IdentityClient = GetIdentityClient(azureCacheOptions);
 
