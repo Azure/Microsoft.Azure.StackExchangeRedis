@@ -8,10 +8,10 @@ namespace Microsoft.Azure.StackExchangeRedis;
 
 internal static class AzureCacheOptionsProviderFactory
 {
-    internal static DefaultOptionsProvider CreateDefaultsForAccessKey(ConfigurationOptions configurationOptions)
+    internal static DefaultOptionsProvider CreateDefaultsForAccessKey(EndPointCollection endPoints)
     {
         var managedRedisOptionsProvider = new AzureManagedRedisCacheOptionsProvider();
-        if (managedRedisOptionsProvider.IsAzureManagedRedisEndpoint(configurationOptions.EndPoints))
+        if (managedRedisOptionsProvider.IsAzureManagedRedisEndpoint(endPoints))
         {
             return managedRedisOptionsProvider;
         }
@@ -19,10 +19,10 @@ internal static class AzureCacheOptionsProviderFactory
         return new AzureCacheOptionsProvider();
     }
 
-    internal static DefaultOptionsProvider CreateDefaultsWithToken(ConfigurationOptions configurationOptions, TokenOptionsProvider tokenOptionsProvider)
+    internal static DefaultOptionsProvider CreateDefaultsWithToken(EndPointCollection endPoints, TokenOptionsProvider tokenOptionsProvider)
     {
         var managedRedisOptionsProvider = new AzureManagedRedisCacheOptionsProviderWithToken(tokenOptionsProvider);
-        if (managedRedisOptionsProvider.IsAzureManagedRedisEndpoint(configurationOptions.EndPoints))
+        if (managedRedisOptionsProvider.IsAzureManagedRedisEndpoint(endPoints))
         {
             return managedRedisOptionsProvider;
         }

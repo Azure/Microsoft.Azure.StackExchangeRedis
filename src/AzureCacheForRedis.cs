@@ -21,7 +21,7 @@ public static class AzureCacheForRedis
     /// Configures a Redis connection authenticated with an access key.
     /// </summary>
     public static Action<ConfigurationOptions> ConfigureForAzure
-        => configurationOptions => configurationOptions.Defaults = AzureCacheOptionsProviderFactory.CreateDefaultsForAccessKey(configurationOptions);
+        => configurationOptions => configurationOptions.Defaults = AzureCacheOptionsProviderFactory.CreateDefaultsForAccessKey(configurationOptions.EndPoints);
 
     /// <summary>
     /// Configures a Redis connection authenticated using a system-assigned managed identity.
@@ -117,7 +117,7 @@ public static class AzureCacheForRedis
             throw new Exception($"Failed to acquire token", ex);
         }
 
-        var optionsProvider = AzureCacheOptionsProviderFactory.CreateDefaultsWithToken(configurationOptions, tokenOpetionsProvider);
+        var optionsProvider = AzureCacheOptionsProviderFactory.CreateDefaultsWithToken(configurationOptions.EndPoints, tokenOpetionsProvider);
         configurationOptions.Defaults = optionsProvider;
         return configurationOptions;
     }
