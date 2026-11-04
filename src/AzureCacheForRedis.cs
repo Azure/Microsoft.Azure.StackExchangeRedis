@@ -21,7 +21,7 @@ public static class AzureCacheForRedis
     /// Configures a Redis connection authenticated with an access key.
     /// </summary>
     public static Action<ConfigurationOptions> ConfigureForAzure
-        => configurationOptions => configurationOptions.Defaults = new AzureCacheOptionsProvider();
+        => configurationOptions => configurationOptions.Defaults = AzureCacheOptionsProviderFactory.CreateDefaultsForAccessKey(configurationOptions.EndPoints);
 
     /// <summary>
     /// Configures a Redis connection authenticated using a system-assigned managed identity.
@@ -102,7 +102,7 @@ public static class AzureCacheForRedis
         this ConfigurationOptions configurationOptions,
         AzureCacheOptions azureCacheOptions)
     {
-        var optionsProvider = new AzureCacheOptionsProviderWithToken(azureCacheOptions, configurationOptions.LoggerFactory);
+        var tokenAuthenticationManager = new RedisTokenAuthenticationManager(azureCacheOptions, configurationOptions.LoggerFactory);
 
         try
         {
@@ -110,15 +110,15 @@ public static class AzureCacheForRedis
             using var azureEventSourceLogForwarder = new AzureEventSourceLogForwarder(configurationOptions.LoggerFactory);
             azureEventSourceLogForwarder.Start();
             
-            await optionsProvider.AcquireTokenAsync(throwOnFailure: true).ConfigureAwait(false);
+            await tokenAuthenticationManager.AcquireTokenAsync(throwOnFailure: true).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             throw new Exception($"Failed to acquire token", ex);
         }
 
+        var optionsProvider = AzureCacheOptionsProviderFactory.CreateDefaultsWithToken(configurationOptions.EndPoints, tokenAuthenticationManager);
         configurationOptions.Defaults = optionsProvider;
-
         return configurationOptions;
     }
 
