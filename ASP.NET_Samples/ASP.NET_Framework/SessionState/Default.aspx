@@ -119,7 +119,7 @@
             <div class="section">
                 <h3>Testing Instructions</h3>
                 <ol>
-                    <li><strong>Redis Setup:</strong> Update the connection string in Web.config to point to your Azure Redis Cache</li>
+                    <li><strong>Redis Setup:</strong> Update the connection string in Web.config to point to your Azure Redis resource</li>
                     <li><strong>Session Persistence:</strong> Add some session data and refresh the page to see it persist</li>
                     <li><strong>Multiple Tabs:</strong> Open this page in multiple tabs and verify session data is shared</li>
                     <li><strong>Cross-Browser:</strong> Test in different browsers to see separate sessions</li>

@@ -1,6 +1,6 @@
 # Redis Session State Provider for ASP.NET Framework 4.8
 
-This project demonstrates how to implement custom session state caching using **Azure Redis Cache** in ASP.NET Framework 4.8 without using the Microsoft.Web.RedisSessionStateProvider package.
+This project demonstrates how to implement custom session state caching using **Azure Redis** in ASP.NET Framework 4.8 without using the Microsoft.Web.RedisSessionStateProvider package.
 
 ## Overview
 
@@ -13,11 +13,11 @@ A production-ready implementation showing:
 
 ## Quick Start
 
-### 1. Set Up Azure Redis Cache
+### 1. Set Up Azure Managed Redis resource
 
-Create an Azure Redis Cache instance and get your connection string:
+Create an Azure Managed Redis resource and get your connection string:
 ```
-yourredis.redis.cache.windows.net:6380,password=yourpassword,ssl=True,abortConnect=False
+name.region.redis.azure.net:10000
 ```
 
 ### 2. Configure Web.config
@@ -25,7 +25,7 @@ yourredis.redis.cache.windows.net:6380,password=yourpassword,ssl=True,abortConne
 Update the connection string:
 ```xml
 <connectionStrings>
-  <add name="RedisCache" connectionString="yourredis.redis.cache.windows.net:6380,password=yourpassword,ssl=True,abortConnect=False"/>
+  <add name="Redis" connectionString="name.region.redis.azure.net:10000"/>
 </connectionStrings>
 ```
 
@@ -110,7 +110,7 @@ ASP.NET-facing wrapper for session data and state.
   <providers>
     <add name="RedisSessionState" 
          type="RedisSessionApp.RedisSessionState" 
-         connectionStringName="RedisCache" 
+         connectionStringName="Redis" 
          applicationName="RedisSessionApp"/>
   </providers>
 </sessionState>
