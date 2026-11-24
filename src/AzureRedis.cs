@@ -25,19 +25,19 @@ public static class AzureRedis
     private static readonly AzureOptionsProvider s_acrOptionsProvider = new();
 
     /// <summary>
-    /// Configures a Redis connection authenticated with an access key.
+    /// Creates a callback that configures Azure Redis defaults for a connection.
     /// </summary>
-    public static ConfigurationOptions ConfigureForAzure(this ConfigurationOptions configurationOptions)
-    {
-        var endpoint = configurationOptions.EndPoints[0];
+    /// <returns>A callback that selects the appropriate defaults based on the configured endpoint.</returns>
+    public static Action<ConfigurationOptions> ConfigureForAzure
+        => configurationOptions =>
+        {
+            var endpoint = configurationOptions.EndPoints[0];
 
-        // Defaults to AMR unless explicitly recognized as ACR
-        configurationOptions.Defaults = s_acrOptionsProvider.IsMatch(endpoint) ?
-            new AzureOptionsProvider()
-            : new AzureManagedRedisOptionsProvider();
-
-        return configurationOptions;
-    }
+            // Defaults to AMR unless explicitly recognized as ACR
+            configurationOptions.Defaults = s_acrOptionsProvider.IsMatch(endpoint) ?
+                new AzureOptionsProvider()
+                : new AzureManagedRedisOptionsProvider();
+        };
 
     /// <summary>
     /// Configures a Redis connection authenticated using a system-assigned managed identity.

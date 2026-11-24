@@ -1,6 +1,6 @@
 ﻿#nullable enable
 StackExchange.Redis.AzureRedis
-static StackExchange.Redis.AzureRedis.ConfigureForAzure(this StackExchange.Redis.ConfigurationOptions! configurationOptions) -> StackExchange.Redis.ConfigurationOptions!
+static StackExchange.Redis.AzureRedis.ConfigureForAzure.get -> System.Action<StackExchange.Redis.ConfigurationOptions!>!
 static StackExchange.Redis.AzureRedis.ConfigureForAzureAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, Microsoft.Azure.StackExchangeRedis.AuthenticationOptions! authenticationOptions) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
 static StackExchange.Redis.AzureRedis.ConfigureForAzureWithTokenCredentialAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, Azure.Core.TokenCredential! tokenCredential) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
 static StackExchange.Redis.AzureRedis.ConfigureForAzureWithUserAssignedManagedIdentityAsync(this StackExchange.Redis.ConfigurationOptions! configurationOptions, string! clientId) -> System.Threading.Tasks.Task<StackExchange.Redis.ConfigurationOptions!>!
