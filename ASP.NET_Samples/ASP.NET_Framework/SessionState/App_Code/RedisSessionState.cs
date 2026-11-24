@@ -14,14 +14,14 @@ using Newtonsoft.Json;
 namespace RedisSessionApp
 {
     /// <summary>
-    /// Custom session state provider using Azure Redis Cache with distributed locking and JSON serialization.
+    /// Custom session state provider using Azure Managed Redis with distributed locking and JSON serialization.
     /// Implements SessionStateStoreProviderBase for ASP.NET Framework 4.8.
     /// </summary>
     public class RedisSessionState : SessionStateStoreProviderBase
     {
-        private static ConnectionMultiplexer _connection;
-        private static IDatabase _database;
-        private static readonly object _connectionLock = new object();
+        private static ConnectionMultiplexer s_connection;
+        private static IDatabase s_database;
+        private static readonly object s_connectionLock = new object();
         private string _applicationName;
         private int _timeout;
         private const int LOCK_TIMEOUT_SECONDS = 30;
@@ -55,20 +55,20 @@ namespace RedisSessionApp
             _applicationName = config["applicationName"] ?? "ASP.NET_SessionState";
 
             // Initialize Redis connection (thread-safe)
-            if (_connection == null || _database == null)
+            if (s_connection == null || s_database == null)
             {
-                lock (_connectionLock)
+                lock (s_connectionLock)
                 {
-                    if (_connection == null)
+                    if (s_connection == null)
                     {
                         var configurationOptions = ConfigurationOptions.Parse(connectionString);
                         configurationOptions = configurationOptions.ConfigureForAzureWithTokenCredentialAsync(new DefaultAzureCredential()).GetAwaiter().GetResult();
-                        _connection = ConnectionMultiplexer.Connect(configurationOptions);
+                        s_connection = ConnectionMultiplexer.Connect(configurationOptions);
                     }
 
-                    if (_database == null)
+                    if (s_database == null)
                     {
-                        _database = _connection.GetDatabase();
+                        s_database = s_connection.GetDatabase();
                     }
                 }
             }
@@ -76,6 +76,16 @@ namespace RedisSessionApp
             // Get timeout from web.config
             var sessionStateConfig = (SessionStateSection)WebConfigurationManager.GetSection("system.web/sessionState");
             _timeout = (int)sessionStateConfig.Timeout.TotalMinutes;
+        }
+
+        public override void Dispose()
+        {
+            if (s_connection != null)
+            {
+                s_connection.Dispose();
+                s_connection = null;
+                s_database = null;
+            }
         }
 
         public override SessionStateStoreData CreateNewStoreData(HttpContext context, int timeout)
@@ -99,7 +109,7 @@ namespace RedisSessionApp
 
             string key = GetRedisKey(id);
             string serializedData = SerializeSessionItem(item);
-            _database.StringSet(key, serializedData, TimeSpan.FromMinutes(timeout));
+            s_database.StringSet(key, serializedData, TimeSpan.FromMinutes(timeout));
         }
 
         /// <summary>
@@ -136,7 +146,7 @@ namespace RedisSessionApp
             string lockKey = GetLockKey(id);
 
             // Try to retrieve the session data
-            string serializedData = _database.StringGet(key);
+            string serializedData = s_database.StringGet(key);
 
             if (string.IsNullOrEmpty(serializedData))
                 return null;
@@ -152,7 +162,7 @@ namespace RedisSessionApp
             if (lockRecord)
             {
                 // Check if session is already locked
-                string existingLock = _database.StringGet(lockKey);
+                string existingLock = s_database.StringGet(lockKey);
 
                 if (!string.IsNullOrEmpty(existingLock))
                 {
@@ -170,7 +180,7 @@ namespace RedisSessionApp
                 for (int retry = 0; retry < LOCK_RETRY_MAX && !lockAcquired; retry++)
                 {
                     // Use SETNX pattern: SET if Not eXists with expiration
-                    lockAcquired = _database.StringSet(lockKey, newLockId,
+                    lockAcquired = s_database.StringSet(lockKey, newLockId,
                         TimeSpan.FromSeconds(LOCK_TIMEOUT_SECONDS),
                         When.NotExists);
 
@@ -186,7 +196,7 @@ namespace RedisSessionApp
                     // Could not acquire lock after retries
                     locked = true;
                     lockAge = DateTime.UtcNow - item.LockDate;
-                    lockId = _database.StringGet(lockKey);
+                    lockId = s_database.StringGet(lockKey);
                     return null;
                 }
 
@@ -197,7 +207,7 @@ namespace RedisSessionApp
 
                 // Update the session item with new lock info
                 string updatedData = SerializeSessionItem(item);
-                _database.StringSet(key, updatedData, TimeSpan.FromMinutes(item.Timeout));
+                s_database.StringSet(key, updatedData, TimeSpan.FromMinutes(item.Timeout));
             }
 
             return new SessionStateStoreData(item.Data,
@@ -227,7 +237,7 @@ namespace RedisSessionApp
 
             try
             {
-                _database.ScriptEvaluate(script, new RedisKey[] { lockKey }, new RedisValue[] { lockValue });
+                s_database.ScriptEvaluate(script, new RedisKey[] { lockKey }, new RedisValue[] { lockValue });
             }
             catch
             {
@@ -245,7 +255,7 @@ namespace RedisSessionApp
             if (lockId == null)
             {
                 // Best-effort cleanup (no exclusive-lock semantics available)
-                _database.KeyDelete(new RedisKey[] { key, lockKey });
+                s_database.KeyDelete(new RedisKey[] { key, lockKey });
                 return;
             }
 
@@ -262,7 +272,7 @@ namespace RedisSessionApp
                 end
             ";
 
-            _database.ScriptEvaluate(
+            s_database.ScriptEvaluate(
                 script,
                 new RedisKey[] { key, lockKey },
                 new RedisValue[] { lockValue });
@@ -271,7 +281,7 @@ namespace RedisSessionApp
         public override void ResetItemTimeout(HttpContext context, string id)
         {
             string key = GetRedisKey(id);
-            _database.KeyExpire(key, TimeSpan.FromMinutes(_timeout));
+            s_database.KeyExpire(key, TimeSpan.FromMinutes(_timeout));
         }
 
         /// <summary>
@@ -299,7 +309,7 @@ namespace RedisSessionApp
             if (lockId == null)
             {
                 // No lock to validate (e.g., provider called without a lock token)
-                _database.StringSet(key, serializedData, expiry);
+                s_database.StringSet(key, serializedData, expiry);
                 return;
             }
 
@@ -316,7 +326,7 @@ namespace RedisSessionApp
                 end
             ";
 
-            _database.ScriptEvaluate(
+            s_database.ScriptEvaluate(
                 script,
                 new RedisKey[] { key, lockKey },
                 new RedisValue[] { lockValue, serializedData, ttlMs });
@@ -415,6 +425,7 @@ namespace RedisSessionApp
                 return null;
             }
         }
+
     }
 
     /// <summary>
