@@ -2,10 +2,17 @@
 
 ## Unreleased
 
-## 3.4.0
-- Update dependency package versions ([#91 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/91))
-- Reference new v2.13.17 of StackExchange.Redis, which [changes](https://github.com/StackExchange/StackExchange.Redis/pull/3067) default behavior on Azure Managed Redis to use RESP3 and avoid unnecessary pub/sub connections
+## 4.0.0
+- WARNING: Breaking changes:
+  - `AzureCacheOptions` type renamed to `AuthenticationOptions`
+  - `IAzureCacheTokenEvents` type renamed to `ITokenEvents`
+  - Log category renamed from `Microsoft.Azure.StackExchangeRedis.AzureCacheOptionsProviderWithToken` to `Microsoft.Azure.StackExchangeRedis.TokenManager`
+  - Removed obsolete `AzureCacheOptions.ThrowOnTokenRefreshFailure` field
+- Improve handling of connections to Azure Managed Redis resources (as opposed to legacy Azure Cache for Redis) to apply AMR-specific connection defaults from StackExchange.Redis ([#100 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/100))
+- Reference new v3.4.35 of StackExchange.Redis, which [changes](https://github.com/StackExchange/StackExchange.Redis/pull/3067) default behavior on Azure Managed Redis to use RESP3 and avoid unnecessary pub/sub connections
+- Fix [#95](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/issues/95) to prevent deadlocks in ASP.NET
 - Add explicit .NET 8.0 and 10.0 targets
+- Update dependency package versions ([#99 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/99))
 
 ## 3.3.1
 - Get additional logging from the Microsoft Identity library ([#89 by philon-msft](https://github.com/Azure/Microsoft.Azure.StackExchangeRedis/pull/89))

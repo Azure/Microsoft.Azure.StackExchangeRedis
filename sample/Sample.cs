@@ -144,7 +144,7 @@ switch (option)
         log.LogInformation("Connecting with a service principal certificate (with Subject Name + Issuer authentication)...");
 
         // Acquire initial token and configure the connection to use it
-        await configurationOptions.ConfigureForAzureAsync(new AzureCacheOptions
+        await configurationOptions.ConfigureForAzureAsync(new AuthenticationOptions
         {
             ClientId = clientId!,
             ServicePrincipalTenantId = tenantId!,
@@ -246,7 +246,7 @@ int GetTlsPort(string hostName)
 
 void SubscribeToTokenEvents(ConfigurationOptions configurationOptions)
 {
-    if (configurationOptions.Defaults is IAzureCacheTokenEvents tokenEvents)
+    if (configurationOptions.Defaults is ITokenEvents tokenEvents)
     {
         tokenEvents.TokenRefreshed += (sender, tokenResult) => log.LogInformation($"{nameof(tokenEvents.TokenRefreshed)} event raised! New token will expire at {tokenResult.ExpiresOn:s}Z");
         tokenEvents.TokenRefreshFailed += (sender, args) => log.LogError($"{nameof(tokenEvents.TokenRefreshFailed)} event raised!. Current token will expire at {args.Expiry}: {args.Exception}");
@@ -255,7 +255,7 @@ void SubscribeToTokenEvents(ConfigurationOptions configurationOptions)
     }
     else
     {
-        log.LogInformation($"{nameof(configurationOptions)} does not implement {nameof(IAzureCacheTokenEvents)}. No token events will be logged.");
+        log.LogInformation($"{nameof(configurationOptions)} does not implement {nameof(ITokenEvents)}. No token events will be logged.");
     }
 }
 
