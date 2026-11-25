@@ -10,7 +10,7 @@ using StackExchange.Redis.Configuration;
 namespace Microsoft.Azure.StackExchangeRedis;
 
 /// <summary>
-/// Connection configuration for use with Azure Redis resources.
+/// Connection configuration for use with Azure Cache for Redis resources.
 /// </summary>
 internal class AzureCacheForRedisConfiguration : AzureOptionsProvider, ITokenEvents
 {

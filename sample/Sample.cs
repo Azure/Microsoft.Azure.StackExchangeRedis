@@ -23,6 +23,7 @@ var log = loggerFactory.CreateLogger("Sample");
 ConfigurationOptions configurationOptions = new()
 {
     // Use the RESP3 protocol instead of RESP2 so pub/sub messages share the same connection with Redis commands without interruption when tokens expire. 
+    // Note that RESP3 is already the default when connecting to Azure Managed Redis, so configuring it explicitly like this is only necessary with Azure Cache for Redis.
     Protocol = RedisProtocol.Resp3,
 
     // Supply this sample app's logger factory so we can get logs from both Microsoft.Azure.StackExchangeRedis and StackExchange.Redis.
