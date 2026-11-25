@@ -19,14 +19,14 @@ internal class TokenManager : ITokenEvents
     internal ITokenServiceClient TokenServiceClient; // internal so unit tests can inject a fake
 
     private readonly AuthenticationOptions _authenticationOptions;
-    private int _connectionCount = 0;
-    private readonly System.Timers.Timer? _heartbeatTimer = new();
+    internal int _connectionCount = 0; // internal for unit tests
+    internal readonly System.Timers.Timer? _heartbeatTimer = new(); // internal for unit tests
     private string? _identityObjectId;
     private string? _token;
     private DateTime _tokenAcquiredTime = DateTime.MinValue;
-    private DateTime _tokenExpiry = DateTime.MinValue;
+    internal DateTime _tokenExpiry = DateTime.MinValue; // internal for unit tests
 
-    private readonly ConcurrentDictionary<int, Connection> _connections = new();
+    internal readonly ConcurrentDictionary<int, Connection> _connections = new(); // internal for unit tests
     private int _nextConnectionId = 0;
     private readonly ILogger? _log;
 
@@ -129,7 +129,7 @@ internal class TokenManager : ITokenEvents
     /// Each StackExchange.Redis.ConnectionMultiplexer instance using these options will call this method when it first connects to Redis
     /// </summary>
     /// <param name="connectionMultiplexer">The multiplexer that just connected.</param>
-    public void StartManagingConnection(ConnectionMultiplexer connectionMultiplexer)
+    public void StartManagingConnection(IConnectionMultiplexer connectionMultiplexer)
     {
         // This is a new connection, so assume it was authenticated with the current token
         _connections.TryAdd(Interlocked.Increment(ref _nextConnectionId), new(connectionMultiplexer, _tokenExpiry));
@@ -143,7 +143,7 @@ internal class TokenManager : ITokenEvents
     }
 
     private int _ensureAuthenticationInProgress = 0;
-    private async Task EnsureAuthenticationAsync()
+    internal async Task EnsureAuthenticationAsync() // internal for unit tests
     {
         // Take the lock
         if (1 == Interlocked.Exchange(ref _ensureAuthenticationInProgress, 1))
