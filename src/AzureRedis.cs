@@ -33,8 +33,8 @@ public static class AzureRedis
         => configurationOptions =>
         {
             configurationOptions.Defaults = configurationOptions.EndPoints.Any() && s_amrOptionsProvider.IsMatch(configurationOptions.EndPoints[0]) ?
-                new AzureManagedRedisOptionsProvider()
-                : new AzureOptionsProvider(); // Fallback to Azure Cache for Redis defaults it not recognized as AMR
+                new AzureManagedRedisConfiguration()
+                : new AzureCacheForRedisConfiguration(); // Fallback to Azure Cache for Redis defaults if host name not recognized as AMR
         };
 
     /// <summary>
@@ -122,14 +122,14 @@ public static class AzureRedis
         {
             // Recognized an Azure Managed Redis host name, so use default options for that service.
             var amrConfig = new AzureManagedRedisConfiguration(authenticationOptions, configurationOptions.LoggerFactory);
-            tokenManager = amrConfig.TokenManager;
+            tokenManager = amrConfig.TokenManager!;
             configurationOptions.Defaults = amrConfig;
         }
         else 
         {
             // Default to Azure Cache for Redis options for all other host names.
             var acrConfig = new AzureCacheForRedisConfiguration(authenticationOptions, configurationOptions.LoggerFactory);
-            tokenManager = acrConfig.TokenManager;
+            tokenManager = acrConfig.TokenManager!;
             configurationOptions.Defaults = acrConfig;
         }
 

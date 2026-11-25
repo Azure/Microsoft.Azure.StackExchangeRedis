@@ -156,6 +156,9 @@ switch (option)
     case "7": // Access key (without Microsoft Entra ID)
         Console.Write("Access key: ");
         configurationOptions.Password = Console.ReadLine()?.Trim();
+        
+        // No Entra ID authentication
+        AzureRedis.ConfigureForAzure(configurationOptions);
 
         log.LogInformation("Connecting with an access key...");
         break;

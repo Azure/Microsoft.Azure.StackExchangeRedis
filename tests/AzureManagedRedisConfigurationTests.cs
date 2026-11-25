@@ -37,7 +37,7 @@ public class AzureManagedRedisConfigurationTests
         };
 
         var amrConfig = new AzureManagedRedisConfiguration(authenticationOptions, configurationOptions.LoggerFactory);
-        amrConfig.TokenManager.TokenServiceClient = fakeTokenServiceClient; // Override the IIdentityClient created during instantiation of TokenManager
+        amrConfig.TokenManager!.TokenServiceClient = fakeTokenServiceClient; // Override the IIdentityClient created during instantiation of TokenManager
 
         var fakeTokenRefreshedHandler = A.Fake<EventHandler<TokenResult>>();
         amrConfig.TokenManager.TokenRefreshed += fakeTokenRefreshedHandler;
@@ -70,7 +70,7 @@ public class AzureManagedRedisConfigurationTests
             GetUserName = (token) => "user"
         };
         var amrConfig = new AzureManagedRedisConfiguration(authenticationOptions, configurationOptions.LoggerFactory);
-        amrConfig.TokenManager.TokenServiceClient = fakeTokenServiceClient; // Override the IIdentityClient created during instantiation of TokenManager
+        amrConfig.TokenManager!.TokenServiceClient = fakeTokenServiceClient; // Override the IIdentityClient created during instantiation of TokenManager
 
         var fakeTokenRefreshedHandler = A.Fake<EventHandler<TokenResult>>();
         amrConfig.TokenManager.TokenRefreshed += fakeTokenRefreshedHandler;

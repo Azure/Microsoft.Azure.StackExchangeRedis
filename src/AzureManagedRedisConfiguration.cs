@@ -14,8 +14,13 @@ namespace Microsoft.Azure.StackExchangeRedis;
 /// </summary>
 internal class AzureManagedRedisConfiguration : AzureManagedRedisOptionsProvider, ITokenEvents
 {
-    internal readonly TokenManager TokenManager;
+    internal readonly TokenManager? TokenManager;
 
+    // Create an instance that does not use Entra ID authentication
+    internal AzureManagedRedisConfiguration()
+    { }
+
+    // Create an instance that uses Entra ID authentication
     internal AzureManagedRedisConfiguration(AuthenticationOptions authenticationOptions, ILoggerFactory? loggerFactory)
     {
         TokenManager = new TokenManager(authenticationOptions, loggerFactory);
@@ -44,19 +49,13 @@ internal class AzureManagedRedisConfiguration : AzureManagedRedisOptionsProvider
     public override string LibraryName => AzureRedis.LibraryName;
 
     /// <summary>
-    /// Require SSL on all connections using Microsoft Entra ID tokens for authentication.
-    /// </summary>
-    /// <returns>True for all cases.</returns>
-    public override bool GetDefaultSsl(EndPointCollection _) => true;
-
-    /// <summary>
     /// The username used to authenticate with the server. 
     /// For Entra ID authentication, this will be the Object ID of the identity used to acquire the token.
     /// </summary>
-    public override string? User => TokenManager.IdentityObjectId;
+    public override string? User => TokenManager?.IdentityObjectId ?? base.User;
 
     /// <inheritdoc/>
-    public override string? Password => TokenManager.Token;
+    public override string? Password => TokenManager?.Token ?? base.Password;
 
     /// <summary>
     /// Initialize new Redis connections managed by this instance of the extension. 
@@ -66,7 +65,7 @@ internal class AzureManagedRedisConfiguration : AzureManagedRedisOptionsProvider
     /// <param name="log">The logger for the connection, to emit to the connection output log.</param>
     public override async Task AfterConnectAsync(ConnectionMultiplexer connectionMultiplexer, Action<string> log)
     {
-        TokenManager.StartManagingConnection(connectionMultiplexer);
+        TokenManager?.StartManagingConnection(connectionMultiplexer);
 
         await base.AfterConnectAsync(connectionMultiplexer, log).ConfigureAwait(false);
     }
