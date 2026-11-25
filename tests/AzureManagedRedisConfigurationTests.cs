@@ -5,12 +5,27 @@ using Azure.Core;
 using FakeItEasy;
 using Microsoft.Identity.Client;
 using StackExchange.Redis;
+using StackExchange.Redis.Configuration;
 
 namespace Microsoft.Azure.StackExchangeRedis.Tests;
 
 [TestClass]
-public class AzureManagedRedisConfigurationTests
+public class AzureManagedRedisConfigurationTests : AzureRedisConfigurationTestsBase
 {
+    internal override DefaultOptionsProvider CreateWithoutAuthentication() => new AzureManagedRedisConfiguration();
+
+    internal override (DefaultOptionsProvider Provider, TokenManager TokenManager) CreateWithAuthentication(AuthenticationOptions options)
+    {
+        var config = new AzureManagedRedisConfiguration(options, loggerFactory: null);
+        return (config, config.TokenManager!);
+    }
+
+    [TestMethod]
+    public void WithoutAuthentication_HasNoTokenManager()
+    {
+        Assert.IsNull(new AzureManagedRedisConfiguration().TokenManager);
+    }
+
     [TestMethod]
     public async Task AcquireTokenAsync_Success()
     {
@@ -85,7 +100,4 @@ public class AzureManagedRedisConfigurationTests
         A.CallTo(() => fakeTokenServiceClient.GetTokenAsync(A<CancellationToken>._)).MustHaveHappenedOnceExactly();
         Assert.AreEqual("token", configurationOptions.Password);
     }
-
-    // TODO: More tests
-
 }
