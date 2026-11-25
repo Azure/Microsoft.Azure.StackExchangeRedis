@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -21,8 +22,8 @@ public static class AzureRedis
     // The name this library identifies itself with via CLIENT SETINFO
     internal static readonly string LibraryName = "MS.Az.SERedis";
 
-    // This is used to detect the type of Azure Redis resource (Azure Cache for Redis vs. Azure Managed Redis)
-    private static readonly AzureOptionsProvider s_acrOptionsProvider = new();
+    // This is used to detect the type of Azure Redis resource (Azure Managed Redis vs. Azure Cache for Redis)
+    private static readonly AzureManagedRedisOptionsProvider s_amrOptionsProvider = new();
 
     /// <summary>
     /// Creates a callback that configures Azure Redis defaults for a connection.
@@ -31,12 +32,9 @@ public static class AzureRedis
     public static Action<ConfigurationOptions> ConfigureForAzure
         => configurationOptions =>
         {
-            var endpoint = configurationOptions.EndPoints[0];
-
-            // Defaults to AMR unless explicitly recognized as ACR
-            configurationOptions.Defaults = s_acrOptionsProvider.IsMatch(endpoint) ?
-                new AzureOptionsProvider()
-                : new AzureManagedRedisOptionsProvider();
+            configurationOptions.Defaults = configurationOptions.EndPoints.Any() && s_amrOptionsProvider.IsMatch(configurationOptions.EndPoints[0]) ?
+                new AzureManagedRedisOptionsProvider()
+                : new AzureOptionsProvider(); // Fallback to Azure Cache for Redis defaults it not recognized as AMR
         };
 
     /// <summary>
@@ -119,21 +117,20 @@ public static class AzureRedis
         AuthenticationOptions authenticationOptions)
     {
         TokenManager tokenManager;
-        var endpoint = configurationOptions.EndPoints[0];
             
-        if (s_acrOptionsProvider.IsMatch(endpoint))
+        if (configurationOptions.EndPoints.Any() && s_amrOptionsProvider.IsMatch(configurationOptions.EndPoints[0]))
         {
-            // Recognized an Azure Cache for Redis host name, so use default options for that service.
-            var acrConfig = new AzureCacheForRedisConfiguration(authenticationOptions, configurationOptions.LoggerFactory);
-            tokenManager = acrConfig.TokenManager;
-            configurationOptions.Defaults = acrConfig;
-        }
-        else 
-        {
-            // Default to Azure Managed Redis options for all other host names.
+            // Recognized an Azure Managed Redis host name, so use default options for that service.
             var amrConfig = new AzureManagedRedisConfiguration(authenticationOptions, configurationOptions.LoggerFactory);
             tokenManager = amrConfig.TokenManager;
             configurationOptions.Defaults = amrConfig;
+        }
+        else 
+        {
+            // Default to Azure Cache for Redis options for all other host names.
+            var acrConfig = new AzureCacheForRedisConfiguration(authenticationOptions, configurationOptions.LoggerFactory);
+            tokenManager = acrConfig.TokenManager;
+            configurationOptions.Defaults = acrConfig;
         }
 
         try
