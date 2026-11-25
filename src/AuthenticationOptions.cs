@@ -11,9 +11,9 @@ using Microsoft.IdentityModel.JsonWebTokens;
 namespace Microsoft.Azure.StackExchangeRedis;
 
 /// <summary>
-/// Options for configuring connections to Azure Cache for Redis.
+/// Options for authenticating connections to Azure Redis resources.
 /// </summary>
-public class AzureCacheOptions
+public class AuthenticationOptions
 {
     /// <summary>
     /// Client ID of a managed identity or a service principal used to authenticate a connection to Redis.
@@ -60,14 +60,6 @@ public class AzureCacheOptions
     /// TokenCredential used to authenticate a connection to Redis.
     /// </summary>
     public TokenCredential? TokenCredential;
-
-    /// <summary>
-    /// Whether or not to throw an exception on failure to acquire or refresh a Microsoft Entra ID token. Default: true.
-    /// </summary>
-    [Obsolete("Failure to acquire initial token will always throw; failure to refresh will never throw. This option is ignored, and will be removed in v4.0."),
-     Browsable(false),
-     EditorBrowsable(EditorBrowsableState.Never)]
-    public bool ThrowOnTokenRefreshFailure = true;
 
     /// <summary>
     /// Determines whether the current token should be refreshed, based on its age and lifespan.

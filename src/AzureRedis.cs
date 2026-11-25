@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -9,19 +10,32 @@ using Azure.Core;
 using Microsoft.Azure.StackExchangeRedis;
 using Microsoft.Extensions.Azure;
 using Microsoft.Identity.Client;
+using StackExchange.Redis.Configuration;
 
 namespace StackExchange.Redis;
 
 /// <summary>
-/// An extension for StackExchange.Redis for configuring connections to Azure Cache for Redis resources.
+/// An extension for StackExchange.Redis for configuring connections to Azure Redis resources.
 /// </summary>
-public static class AzureCacheForRedis
+public static class AzureRedis
 {
+    // The name this library identifies itself with via CLIENT SETINFO
+    internal static readonly string LibraryName = "MS.Az.SERedis";
+
+    // This is used to detect the type of Azure Redis resource (Azure Managed Redis vs. Azure Cache for Redis)
+    private static readonly AzureManagedRedisOptionsProvider s_amrOptionsProvider = new();
+
     /// <summary>
-    /// Configures a Redis connection authenticated with an access key.
+    /// Creates a callback that configures Azure Redis defaults for a connection.
     /// </summary>
+    /// <returns>A callback that selects the appropriate defaults based on the configured endpoint.</returns>
     public static Action<ConfigurationOptions> ConfigureForAzure
-        => configurationOptions => configurationOptions.Defaults = new AzureCacheOptionsProvider();
+        => configurationOptions =>
+        {
+            configurationOptions.Defaults = configurationOptions.EndPoints.Any() && s_amrOptionsProvider.IsMatch(configurationOptions.EndPoints[0]) ?
+                new AzureManagedRedisConfiguration()
+                : new AzureCacheForRedisConfiguration(); // Fallback to Azure Cache for Redis defaults if host name not recognized as AMR
+        };
 
     /// <summary>
     /// Configures a Redis connection authenticated using a system-assigned managed identity.
@@ -33,7 +47,7 @@ public static class AzureCacheForRedis
     public static async Task<ConfigurationOptions> ConfigureForAzureWithSystemAssignedManagedIdentityAsync(this ConfigurationOptions configurationOptions)
         => await ConfigureForAzureAsync(
             configurationOptions,
-            new AzureCacheOptions()).ConfigureAwait(false);
+            new AuthenticationOptions()).ConfigureAwait(false);
 
     /// <summary>
     /// Configures a Redis connection authenticated using a user-assigned managed identity.
@@ -46,7 +60,7 @@ public static class AzureCacheForRedis
     public static async Task<ConfigurationOptions> ConfigureForAzureWithUserAssignedManagedIdentityAsync(this ConfigurationOptions configurationOptions, string clientId)
         => await ConfigureForAzureAsync(
             configurationOptions,
-            new AzureCacheOptions()
+            new AuthenticationOptions()
             {
                 ClientId = clientId,
             }).ConfigureAwait(false);
@@ -68,7 +82,7 @@ public static class AzureCacheForRedis
     public static async Task<ConfigurationOptions> ConfigureForAzureWithServicePrincipalAsync(this ConfigurationOptions configurationOptions, string clientId, string tenantId, string? secret = null, X509Certificate2? certificate = null, AzureCloudInstance cloud = AzureCloudInstance.AzurePublic, string? cloudUri = null)
         => await ConfigureForAzureAsync(
             configurationOptions,
-            new AzureCacheOptions()
+            new AuthenticationOptions()
             {
                 ClientId = clientId,
                 ServicePrincipalTenantId = tenantId,
@@ -86,38 +100,51 @@ public static class AzureCacheForRedis
     public static async Task<ConfigurationOptions> ConfigureForAzureWithTokenCredentialAsync(this ConfigurationOptions configurationOptions, TokenCredential tokenCredential)
         => await ConfigureForAzureAsync(
             configurationOptions,
-            new AzureCacheOptions()
+            new AuthenticationOptions()
             {
                 TokenCredential = tokenCredential
             }).ConfigureAwait(false);
 
     /// <summary>
-    /// Configures a connection to an Azure Cache for Redis using advanced options.
+    /// Configures a connection to an Azure Redis resource using advanced options.
     /// </summary>
     /// <param name="configurationOptions">The configuration to update.</param>
-    /// <param name="azureCacheOptions">Options for configuring a connection to an Azure Cache for Redis.</param>
+    /// <param name="authenticationOptions">Options for configuring a connection to an Azure Redis resource.</param>
     /// <exception cref="MsalServiceException">When the token source is not supported or identified incorrectly.</exception>
     /// <exception cref="HttpRequestException">Unable to contact the identity service to acquire a token.</exception>
     public static async Task<ConfigurationOptions> ConfigureForAzureAsync(
         this ConfigurationOptions configurationOptions,
-        AzureCacheOptions azureCacheOptions)
+        AuthenticationOptions authenticationOptions)
     {
-        var optionsProvider = new AzureCacheOptionsProviderWithToken(azureCacheOptions, configurationOptions.LoggerFactory);
+        TokenManager tokenManager;
+            
+        if (configurationOptions.EndPoints.Any() && s_amrOptionsProvider.IsMatch(configurationOptions.EndPoints[0]))
+        {
+            // Recognized an Azure Managed Redis host name, so use default options for that service.
+            var amrConfig = new AzureManagedRedisConfiguration(authenticationOptions, configurationOptions.LoggerFactory);
+            tokenManager = amrConfig.TokenManager!;
+            configurationOptions.Defaults = amrConfig;
+        }
+        else 
+        {
+            // Default to Azure Cache for Redis options for all other host names.
+            var acrConfig = new AzureCacheForRedisConfiguration(authenticationOptions, configurationOptions.LoggerFactory);
+            tokenManager = acrConfig.TokenManager!;
+            configurationOptions.Defaults = acrConfig;
+        }
 
         try
         {
-            // Log diagnostic details from Azure Identity as it attempts to acquire the initial token
+            // Have the Azure Identity library log diagnostic details as it attempts to acquire the initial token.
             using var azureEventSourceLogForwarder = new AzureEventSourceLogForwarder(configurationOptions.LoggerFactory);
             azureEventSourceLogForwarder.Start();
-            
-            await optionsProvider.AcquireTokenAsync(throwOnFailure: true).ConfigureAwait(false);
+
+            await tokenManager.AcquireTokenAsync(throwOnFailure: true).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             throw new Exception($"Failed to acquire token", ex);
         }
-
-        configurationOptions.Defaults = optionsProvider;
 
         return configurationOptions;
     }

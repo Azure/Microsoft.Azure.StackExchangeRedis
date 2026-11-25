@@ -8,7 +8,7 @@ namespace Microsoft.Azure.StackExchangeRedis;
 /// <summary>
 /// Events raised to notify Redis client applications about authentication token management operations.
 /// </summary>
-public interface IAzureCacheTokenEvents
+public interface ITokenEvents
 {
     /// <summary>
     /// Raised when an authentication token is refreshed.

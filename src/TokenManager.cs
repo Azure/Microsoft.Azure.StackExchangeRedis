@@ -12,35 +12,35 @@ using StackExchange.Redis;
 namespace Microsoft.Azure.StackExchangeRedis;
 
 /// <summary>
-/// Redis connection configuration options provider for using Microsoft Entra ID authentication with Azure Cache for Redis.
+/// Manages Entra tokens used to authenticate one or more Azure Redis connections.
 /// </summary>
-internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, IAzureCacheTokenEvents
+internal class TokenManager : ITokenEvents
 {
-    internal ICacheIdentityClient IdentityClient; // internal so unit tests can inject a fake
+    internal ITokenServiceClient TokenServiceClient; // internal so unit tests can inject a fake
 
-    private readonly AzureCacheOptions _azureCacheOptions;
-    private int _currentActiveConnections = 0;
+    private readonly AuthenticationOptions _authenticationOptions;
+    private int _connectionCount = 0;
     private readonly System.Timers.Timer? _heartbeatTimer = new();
-    private string? _user;
+    private string? _identityObjectId;
     private string? _token;
     private DateTime _tokenAcquiredTime = DateTime.MinValue;
     private DateTime _tokenExpiry = DateTime.MinValue;
 
-    private readonly ConcurrentDictionary<int, CacheConnection> _cacheConnections = new();
+    private readonly ConcurrentDictionary<int, Connection> _connections = new();
     private int _nextConnectionId = 0;
     private readonly ILogger? _log;
 
-    internal AzureCacheOptionsProviderWithToken(
-        AzureCacheOptions azureCacheOptions,
+    internal TokenManager(
+        AuthenticationOptions authenticationOptions,
         ILoggerFactory? loggerFactory)
         : base()
     {
-        _azureCacheOptions = azureCacheOptions;
-        _log = loggerFactory?.CreateLogger<AzureCacheOptionsProviderWithToken>();
+        _authenticationOptions = authenticationOptions;
+        _log = loggerFactory?.CreateLogger<TokenManager>();
 
-        IdentityClient = GetIdentityClient(azureCacheOptions);
+        TokenServiceClient = GetIdentityClient(authenticationOptions);
 
-        _heartbeatTimer.Interval = azureCacheOptions.TokenHeartbeatInterval.TotalMilliseconds;
+        _heartbeatTimer.Interval = authenticationOptions.TokenHeartbeatInterval.TotalMilliseconds;
         _heartbeatTimer.Elapsed += async (s, e) =>
         {
             try
@@ -51,7 +51,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
             {
                 // Throwing exceptions inside an async void Timer handler would crash the process, do don't allow them to propagate
                 // Any exceptions thrown during token retrieval will be reported to the client application via the TokenRefreshFailed or ConnectionReauthenticationFailed events
-                _log?.LogError(ex, $"Failed to ensure that connection authentication is current. Next attempt in {azureCacheOptions.TokenHeartbeatInterval.TotalSeconds} seconds");
+                _log?.LogError(ex, $"Failed to ensure that connection authentication is current. Next attempt in {authenticationOptions.TokenHeartbeatInterval.TotalSeconds} seconds");
             }
         };
         _heartbeatTimer.AutoReset = true;
@@ -59,49 +59,42 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     }
 
     /// <summary>
-    /// Instantiates a <see cref="CacheIdentityClient"/> configured for a specific authentication type, depending on the properties supplied in <paramref name="azureCacheOptions"/>
+    /// Instantiates a <see cref="StackExchangeRedis.TokenServiceClient"/> configured for a specific authentication type, depending on the properties supplied in <paramref name="authenticationOptions"/>
     /// </summary>
-    /// <param name="azureCacheOptions">Options including details of the managed identity or service principal used for authentication</param>
-    private ICacheIdentityClient GetIdentityClient(AzureCacheOptions azureCacheOptions)
+    /// <param name="authenticationOptions">Options including details of the managed identity or service principal used for authentication</param>
+    private ITokenServiceClient GetIdentityClient(AuthenticationOptions authenticationOptions)
     {
-        if (azureCacheOptions.TokenCredential is not null) // DefaultAzureCredential (or other TokenCredential)
+        if (authenticationOptions.TokenCredential is not null) // DefaultAzureCredential (or other TokenCredential)
         {
-            return CacheIdentityClient.CreateForTokenCredential(azureCacheOptions.TokenCredential, azureCacheOptions.Scope);
+            return StackExchangeRedis.TokenServiceClient.CreateForTokenCredential(authenticationOptions.TokenCredential, authenticationOptions.Scope);
         }
-        else if (azureCacheOptions.ServicePrincipalTenantId is not null || azureCacheOptions.ServicePrincipalSecret is not null || azureCacheOptions.ServicePrincipalCertificate is not null) // Service Principal
+        else if (authenticationOptions.ServicePrincipalTenantId is not null || authenticationOptions.ServicePrincipalSecret is not null || authenticationOptions.ServicePrincipalCertificate is not null) // Service Principal
         {
-            if (azureCacheOptions.ClientId is null || azureCacheOptions.ServicePrincipalTenantId is null)
+            if (authenticationOptions.ClientId is null || authenticationOptions.ServicePrincipalTenantId is null)
             {
-                throw new ArgumentException($"To use a service principal, {nameof(azureCacheOptions.ClientId)} and {nameof(azureCacheOptions.ServicePrincipalTenantId)} must be specified");
+                throw new ArgumentException($"To use a service principal, {nameof(authenticationOptions.ClientId)} and {nameof(authenticationOptions.ServicePrincipalTenantId)} must be specified");
             }
 
-            if (azureCacheOptions.ServicePrincipalSecret is null && azureCacheOptions.ServicePrincipalCertificate is null)
+            if (authenticationOptions.ServicePrincipalSecret is null && authenticationOptions.ServicePrincipalCertificate is null)
             {
-                throw new ArgumentException($"To use a service principal, {nameof(azureCacheOptions.ServicePrincipalSecret)} or {nameof(azureCacheOptions.ServicePrincipalCertificate)} must be specified");
+                throw new ArgumentException($"To use a service principal, {nameof(authenticationOptions.ServicePrincipalSecret)} or {nameof(authenticationOptions.ServicePrincipalCertificate)} must be specified");
             }
 
-            return CacheIdentityClient.CreateForServicePrincipal(azureCacheOptions, _log);
+            return StackExchangeRedis.TokenServiceClient.CreateForServicePrincipal(authenticationOptions, _log);
         }
         else // Managed identity
         {
-            return CacheIdentityClient.CreateForManagedIdentity(azureCacheOptions, _log);
+            return StackExchangeRedis.TokenServiceClient.CreateForManagedIdentity(authenticationOptions, _log);
         }
     }
 
     /// <summary>
-    /// Require SSL on all connections using Microsoft Entra ID tokens for authentication.
+    /// The Object ID of the identity used to acquire the token.
     /// </summary>
-    /// <returns>True for all cases.</returns>
-    public override bool GetDefaultSsl(EndPointCollection _) => true;
-
-    /// <summary>
-    /// The username used to authenticate with the server. 
-    /// For Entra ID authentication, this should be the Object ID of the identity used to acquire the token.
-    /// </summary>
-    public override string? User => _user;
+    public string? IdentityObjectId => _identityObjectId;
 
     /// <inheritdoc/>
-    public override string? Password
+    public string? Token
     {
         get
         {
@@ -132,30 +125,20 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     public event EventHandler<ConnectionReauthenticationFailedEventArgs>? ConnectionReauthenticationFailed;
 
     /// <summary>
-    /// Initialize new Redis connections managed by this instance of the extension. 
+    /// Add a new Redis connection to the list of connections using this token. 
     /// Each StackExchange.Redis.ConnectionMultiplexer instance using these options will call this method when it first connects to Redis
     /// </summary>
     /// <param name="connectionMultiplexer">The multiplexer that just connected.</param>
-    /// <param name="log">The logger for the connection, to emit to the connection output log.</param>
-    public override async Task AfterConnectAsync(ConnectionMultiplexer connectionMultiplexer, Action<string> log)
+    public void StartManagingConnection(ConnectionMultiplexer connectionMultiplexer)
     {
-        try
-        {
-            // This is a new connection, so assume it was authenticated with the current token
-            _cacheConnections.TryAdd(Interlocked.Increment(ref _nextConnectionId), new(connectionMultiplexer, _tokenExpiry));
+        // This is a new connection, so assume it was authenticated with the current token
+        _connections.TryAdd(Interlocked.Increment(ref _nextConnectionId), new(connectionMultiplexer, _tokenExpiry));
 
-            if (Interlocked.Increment(ref _currentActiveConnections) == 1)
-            {
-                // Start token refresh timer when connection count moves from 0 to 1
-                _heartbeatTimer?.Start();
-                _log?.LogInformation("Redis connection established. Starting token refresh.");
-            }
-
-            await base.AfterConnectAsync(connectionMultiplexer, log).ConfigureAwait(false);
-        }
-        catch (Exception ex)
+        if (Interlocked.Increment(ref _connectionCount) == 1)
         {
-            _log?.LogError($"Failed to initialize new connection: {ex}");
+            // Start token refresh timer when connection count moves from 0 to 1
+            _heartbeatTimer?.Start();
+            _log?.LogInformation("Redis connection established. Starting token refresh heartbeat.");
         }
     }
 
@@ -173,7 +156,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         {
             if (_tokenExpiry <= DateTime.UtcNow // Token has expired
                 || (_tokenExpiry - _tokenAcquiredTime) <= TimeSpan.Zero // Current expiry is not valid
-                || _azureCacheOptions.ShouldTokenBeRefreshed(_tokenAcquiredTime, _tokenExpiry)) // Token is due for refresh
+                || _authenticationOptions.ShouldTokenBeRefreshed(_tokenAcquiredTime, _tokenExpiry)) // Token is due for refresh
             {
                 await AcquireTokenAsync(throwOnFailure: false).ConfigureAwait(false);
             }
@@ -194,7 +177,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     }
 
     /// <summary>
-    /// Acquires a token to authenticate connections to Azure Cache for Redis
+    /// Acquires a token to authenticate connections to Azure Redis
     /// </summary>
     /// <param name="throwOnFailure"><see langword="true"/> to throw on failure, <see langword="false"/> to suppress handle exceptions and retry</param>
     internal async Task AcquireTokenAsync(bool throwOnFailure)
@@ -202,7 +185,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         TokenResult? tokenResult = null;
         Exception? lastException = null;
 
-        for (var attemptCount = 0; attemptCount < _azureCacheOptions.MaxTokenRefreshAttempts; ++attemptCount)
+        for (var attemptCount = 0; attemptCount < _authenticationOptions.MaxTokenRefreshAttempts; ++attemptCount)
         {
             // Cancel call to acquire token after 10+ seconds. Fail fast (10s) on initial call to evade a transient hang,
             // then increase timeout on subsequent attempts in case it legitimately needs more time. 
@@ -211,23 +194,23 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
             try
             {
                 _log?.LogTrace($"Requesting token...");
-                tokenResult = await IdentityClient.GetTokenAsync(cts.Token).ConfigureAwait(false);
+                tokenResult = await TokenServiceClient.GetTokenAsync(cts.Token).ConfigureAwait(false);
 
                 break;
             }
             catch (Exception ex)
             {
                 lastException = ex;
-                _log?.LogWarning(ex, $"Failed to acquire token on attempt {attemptCount + 1} of {_azureCacheOptions.MaxTokenRefreshAttempts}.");
+                _log?.LogWarning(ex, $"Failed to acquire token on attempt {attemptCount + 1} of {_authenticationOptions.MaxTokenRefreshAttempts}.");
             }
 
-            await Task.Delay(_azureCacheOptions.TokenRefreshBackoff.Invoke(attemptCount, lastException)).ConfigureAwait(false);
+            await Task.Delay(_authenticationOptions.TokenRefreshBackoff.Invoke(attemptCount, lastException)).ConfigureAwait(false);
         }
 
         if (tokenResult is null)
         {
-            _log?.LogError(lastException, $"Failed all {_azureCacheOptions.MaxTokenRefreshAttempts} attempts to acquire a new token. Current token expiry is {_tokenExpiry:s} UTC");
-            await InvokeHandlerWithTimeoutAsync(() => TokenRefreshFailed?.Invoke(this, new(lastException, _tokenExpiry)), nameof(TokenRefreshFailed));
+            _log?.LogError(lastException, $"Failed all {_authenticationOptions.MaxTokenRefreshAttempts} attempts to acquire a new token. Current token expiry is {_tokenExpiry:s} UTC");
+            await InvokeHandlerWithTimeoutAsync(() => TokenRefreshFailed?.Invoke(this, new(lastException, _tokenExpiry)), nameof(TokenRefreshFailed)).ConfigureAwait(false);
 
             if (throwOnFailure && lastException is not null)
             {
@@ -248,14 +231,14 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
         _tokenAcquiredTime = DateTime.UtcNow;
         _token = tokenResult.Token;
         _tokenExpiry = tokenResult.ExpiresOn.UtcDateTime;
-        if (_user is null)
+        if (_identityObjectId is null)
         {
             // Extract user name from the first token acquired for an identity
-            _user = _azureCacheOptions.GetUserName(_token);
-            _log?.LogInformation($"Acquired token for identity with Object ID: '{_user}'");
+            _identityObjectId = _authenticationOptions.GetUserName(_token);
+            _log?.LogInformation($"Acquired token for identity with Object ID: '{_identityObjectId}'");
         }
         _log?.LogInformation($"Acquired token with expiration: {tokenResult.ExpiresOn.UtcDateTime:s} UTC");
-        await InvokeHandlerWithTimeoutAsync(() => TokenRefreshed?.Invoke(this, tokenResult), nameof(TokenRefreshed));
+        await InvokeHandlerWithTimeoutAsync(() => TokenRefreshed?.Invoke(this, tokenResult), nameof(TokenRefreshed)).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -263,9 +246,9 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
     /// </summary>
     private async Task ReauthenticateConnectionsAsync()
     {
-        var connectionTasks = new List<Task>(_cacheConnections.Count);
+        var connectionTasks = new List<Task>(_connections.Count);
 
-        foreach (var connection in _cacheConnections)
+        foreach (var connection in _connections)
         {
             if (connection.Value.TokenExpiry >= _tokenExpiry)
             {
@@ -308,7 +291,7 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
                                 // When a subscription connection's token expires, the server will close it and StackExchange.Redis will immediately restore the connection using the current token.
                                 // This may result in brief gaps where subscription connections are not available and published messages aren't received by clients that are in the process of recovering their connection. 
                                 _log?.LogTrace($"Re-authenticating connection to '{server.EndPoint}'...");
-                                await server.ExecuteAsync("AUTH", User!, Password!).ConfigureAwait(false);
+                                await server.ExecuteAsync("AUTH", IdentityObjectId!, Token!).ConfigureAwait(false);
                                 _log?.LogInformation($"Re-authenticated connection to '{server.EndPoint}' with a token that will expire at {_tokenExpiry:s} UTC");
 
                                 await InvokeHandlerWithTimeoutAsync(() => ConnectionReauthenticated?.Invoke(this, server.EndPoint.ToString()!), nameof(ConnectionReauthenticated)).ConfigureAwait(false);
@@ -356,8 +339,8 @@ internal class AzureCacheOptionsProviderWithToken : AzureCacheOptionsProvider, I
 
     private void StopManagingConnection(int key)
     {
-        if (_cacheConnections.TryRemove(key, out _)
-            && Interlocked.Decrement(ref _currentActiveConnections) == 0)
+        if (_connections.TryRemove(key, out _)
+            && Interlocked.Decrement(ref _connectionCount) == 0)
         {
             _heartbeatTimer?.Stop();
             _log?.LogWarning("No more Redis connections to manage. Stopping token refresh.");

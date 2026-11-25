@@ -12,9 +12,9 @@ using Microsoft.Identity.Client.AppConfig;
 namespace Microsoft.Azure.StackExchangeRedis;
 
 /// <summary>
-/// Acquires tokens from Microsoft Entra ID for authenticating connections to Azure Cache for Redis.
+/// Acquires tokens from Microsoft Entra ID for authenticating connections to Azure Redis.
 /// </summary>
-internal interface ICacheIdentityClient
+internal interface ITokenServiceClient
 {
     /// <summary>
     /// Acquire a token to be used to authenticate a connection.
@@ -23,17 +23,17 @@ internal interface ICacheIdentityClient
     Task<TokenResult> GetTokenAsync(CancellationToken cancellationToken);
 }
 
-internal class CacheIdentityClient : ICacheIdentityClient
+internal class TokenServiceClient : ITokenServiceClient
 {
     private readonly Func<CancellationToken, Task<TokenResult>> _getToken;
 
-    private CacheIdentityClient(Func<CancellationToken, ValueTask<AccessToken>> getToken)
+    private TokenServiceClient(Func<CancellationToken, ValueTask<AccessToken>> getToken)
         => _getToken = async (cancellationToken) => new TokenResult(await getToken.Invoke(cancellationToken).ConfigureAwait(false));
 
-    private CacheIdentityClient(Func<CancellationToken, Task<AuthenticationResult>> getToken)
+    private TokenServiceClient(Func<CancellationToken, Task<AuthenticationResult>> getToken)
         => _getToken = async (cancellationToken) => new TokenResult(await getToken.Invoke(cancellationToken).ConfigureAwait(false));
 
-    internal static ICacheIdentityClient CreateForManagedIdentity(AzureCacheOptions options, ILogger? log)
+    internal static ITokenServiceClient CreateForManagedIdentity(AuthenticationOptions options, ILogger? log)
     {
         var clientAppBuilder = ManagedIdentityApplicationBuilder.Create(
             options.ClientId is null ?
@@ -49,10 +49,10 @@ internal class CacheIdentityClient : ICacheIdentityClient
 
         var clientApp = clientAppBuilder.Build();
 
-        return new CacheIdentityClient(getToken: (cancellationToken) => clientApp.AcquireTokenForManagedIdentity(options.Scope).ExecuteAsync(cancellationToken));
+        return new TokenServiceClient(getToken: (cancellationToken) => clientApp.AcquireTokenForManagedIdentity(options.Scope).ExecuteAsync(cancellationToken));
     }
 
-    internal static ICacheIdentityClient CreateForServicePrincipal(AzureCacheOptions options, ILogger? log)
+    internal static ITokenServiceClient CreateForServicePrincipal(AuthenticationOptions options, ILogger? log)
     {
         var clientAppBuilder = ConfidentialClientApplicationBuilder.Create(options.ClientId)
             .WithCloudAuthority(options)
@@ -65,17 +65,17 @@ internal class CacheIdentityClient : ICacheIdentityClient
 
         var clientApp = clientAppBuilder.Build();
 
-        return new CacheIdentityClient(getToken: (cancellationToken) => clientApp.AcquireTokenForClient(new[] { options.Scope }).ExecuteAsync(cancellationToken));
+        return new TokenServiceClient(getToken: (cancellationToken) => clientApp.AcquireTokenForClient(new[] { options.Scope }).ExecuteAsync(cancellationToken));
     }
 
-    internal static ICacheIdentityClient CreateForTokenCredential(TokenCredential tokenCredential, string scope)
+    internal static ITokenServiceClient CreateForTokenCredential(TokenCredential tokenCredential, string scope)
     {
         var tokenRequestContext = new TokenRequestContext(new[] { scope });
 
-        return new CacheIdentityClient(getToken: (cancellationToken) => tokenCredential.GetTokenAsync(tokenRequestContext, cancellationToken));
+        return new TokenServiceClient(getToken: (cancellationToken) => tokenCredential.GetTokenAsync(tokenRequestContext, cancellationToken));
     }
 
-    async Task<TokenResult> ICacheIdentityClient.GetTokenAsync(CancellationToken cancellationToken)
+    async Task<TokenResult> ITokenServiceClient.GetTokenAsync(CancellationToken cancellationToken)
         => await _getToken.Invoke(cancellationToken).ConfigureAwait(false);
 
     private static void IdentityLog(Identity.Client.LogLevel level, string message, bool containsPii, ILogger log)
@@ -102,12 +102,12 @@ internal class CacheIdentityClient : ICacheIdentityClient
 
 internal static class ConfidentialClientApplicationBuilderExtensions
 {
-    internal static ConfidentialClientApplicationBuilder WithCloudAuthority(this ConfidentialClientApplicationBuilder builder, AzureCacheOptions options)
+    internal static ConfidentialClientApplicationBuilder WithCloudAuthority(this ConfidentialClientApplicationBuilder builder, AuthenticationOptions options)
         => options.CloudUri is null ?
             builder.WithAuthority(options.Cloud, options.ServicePrincipalTenantId)
             : builder.WithAuthority(options.CloudUri, options.ServicePrincipalTenantId);
 
-    internal static ConfidentialClientApplicationBuilder WithCredentials(this ConfidentialClientApplicationBuilder builder, AzureCacheOptions options)
+    internal static ConfidentialClientApplicationBuilder WithCredentials(this ConfidentialClientApplicationBuilder builder, AuthenticationOptions options)
         => options.ServicePrincipalCertificate is null ?
             builder.WithClientSecret(options.ServicePrincipalSecret)
             : builder.WithCertificate(options.ServicePrincipalCertificate, options.SendX5C);

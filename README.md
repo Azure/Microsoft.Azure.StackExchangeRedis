@@ -6,10 +6,12 @@ Tags: Redis,Cache,StackExchange.Redis,Microsoft,Azure
 ---
 
 # Microsoft.Azure.StackExchangeRedis Extension
-The Microsoft.Azure.StackExchangeRedis package is an extension for the StackExchange.Redis client library that enables using Microsoft Entra ID to authenticate connections from a Redis client application to an Azure Cache for Redis resource. This extension acquires an access token for an Azure [managed identity](https://learn.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview), [service principal](https://learn.microsoft.com/azure/active-directory/develop/app-objects-and-service-principals), or user and configures a StackExchange.Redis connection to use the token for authentication. Before the token expires, it acquires a fresh token and re-authenticates the connection to maintain uninterrupted communication with the cache indefinitely. 
+The Microsoft.Azure.StackExchangeRedis package is an extension for the StackExchange.Redis client library that enables using Microsoft Entra ID to authenticate connections from a Redis client application to an Azure Redis resource. This extension acquires an access token for an Azure [managed identity](https://learn.microsoft.com/azure/active-directory/managed-identities-azure-resources/overview), [service principal](https://learn.microsoft.com/azure/active-directory/develop/app-objects-and-service-principals), or user and configures a StackExchange.Redis connection to use the token for authentication. Before the token expires, it acquires a fresh token and re-authenticates the connection to maintain uninterrupted communication with Redis indefinitely. 
 
 ### Subscription connections
-With the default RESP2 protocol, StackExchange.Redis actually creates two connections behind the scenes: an "interactive" connection for normal Redis commands (GET, SET, etc.), plus a "subscription" connection for [pub/sub](https://redis.io/glossary/pub-sub/) messages. The interactive connection is the one that's proactively re-authenticated with fresh tokens, while the subscription connection cannot be re-authenticated. When using RESP2 you will see subscription connections being closed by the Redis server when their token expires, and then immediately restored by StackExchange.Redis using a current token. To avoid these interruptions, we recommend using the RESP3 protocol which bundles all traffic (interactive and pub/sub) on a single connection to Redis, which will be proactively re-authenticated. Opt in to RESP3 by specifying `protocol=resp3` in the connection string, or by setting `configurationOptions.Protocol = RedisProtocol.Resp3` as shown in [sample/Sample.cs](./sample/Sample.cs). If RESP2 is used, it's expected to see "MicrosoftEntraTokenExpired" in Redis error metrics due to the subscription connections.
+With the RESP2 protocol (default when connecting to Azure Cache for Redis), StackExchange.Redis actually creates two connections behind the scenes: an "interactive" connection for normal Redis commands (GET, SET, etc.), plus a "subscription" connection for [pub/sub](https://redis.io/glossary/pub-sub/) messages. The interactive connection is the one that's proactively re-authenticated with fresh tokens, while the subscription connection cannot be re-authenticated. When using RESP2 you will see subscription connections being closed by the Redis server when their token expires, and then immediately restored by StackExchange.Redis using a current token. 
+
+To avoid these interruptions, we recommend using the RESP3 protocol, which will be proactively re-authenticated. RESP3 is the default when connecting to Azure Managed Redis, and you can explicitly opt in on Azure Cache for Redis connections by specifying `protocol=resp3` in the connection string, or by setting `configurationOptions.Protocol = RedisProtocol.Resp3` as shown in [sample/Sample.cs](./sample/Sample.cs).
 
 ## Usage
 See [sample/Sample.cs](./sample/Sample.cs) for detailed examples of how to use the extension for all supported authentication scenarios.
@@ -18,10 +20,10 @@ High level instructions:
 
 1. Add a reference to the [Microsoft.Azure.StackExchangeRedis](https://www.nuget.org/packages/Microsoft.Azure.StackExchangeRedis) NuGet package in your Redis client project.
 
-2. In your Redis connection code, first create a `ConfigurationOptions` instance. You can use the `.Parse()` method to create an instance from a Redis connection string or the cache host name alone.
+2. In your Redis connection code, first create a `ConfigurationOptions` instance. You can use the `.Parse()` method to create an instance from a Redis connection string or the Redis host name alone.
 
 ```csharp
-var configurationOptions = ConfigurationOptions.Parse($"{cacheHostName}:6380");
+var configurationOptions = ConfigurationOptions.Parse($"{redisHostName}:{redisPort}");
 ```
 
 3. Use one of the _ConfigureForAzure*_ extension methods supplied by this package to configure the authentication options:
@@ -43,7 +45,7 @@ await configurationOptions.ConfigureForAzureWithServicePrincipalAsync(clientId, 
 await configurationOptions.ConfigureForAzureWithServicePrincipalAsync(clientId, tenantId, certificate);
 
 // Service principal certificate with Subject Name + Issuer (SNI) authentication (Microsoft internal use only)
-await configurationOptions.ConfigureForAzureAsync(new AzureCacheOptions
+await configurationOptions.ConfigureForAzureAsync(new AuthenticationOptions
 {
     ClientId = clientId,
     ServicePrincipalTenantId = tenantId,
@@ -52,7 +54,7 @@ await configurationOptions.ConfigureForAzureAsync(new AzureCacheOptions
 });
 ```
 
-4. Create the connection, passing in the `ConfigurationOptions` instance
+4. Create the connection, passing in the `ConfigurationOptions` instance returned by `.ConfigureForAzure*()`
 
 ```csharp
 var connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurationOptions);
@@ -61,12 +63,12 @@ var connectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(configurati
 5. Use the `connectionMultiplexer` to interact with  Redis as you normally would. 
 
 ## Running the sample
-The [sample](./sample) directory contains a project showing how to connect to an Azure Redis cache using the various authentication mechanisms supported by this extension. Borrow code from this sample for your own project, or simply run it to test the authentication configuration on your cache. It will prompt you for the type of authentication to use and then the necessary credentials. To run the sample: 
-1. [Create an Azure Cache for Redis resource](https://learn.microsoft.com/azure/azure-cache-for-redis/quickstart-create-redis)
-1. Configure AAD authentication on your cache using the instructions in [Use Microsoft Entra ID for cache authentication](https://learn.microsoft.com/azure/azure-cache-for-redis/cache-azure-active-directory-for-authentication)
+The [sample](./sample) directory contains a project showing how to connect to an Azure Redis resource using the various authentication mechanisms supported by this extension. Borrow code from this sample for your own project, or simply run it to test the authentication configuration on your cache. It will prompt you for the type of authentication to use and then the necessary credentials. To run the sample: 
+1. [Create an Azure Managed Redis resource](https://learn.microsoft.com/azure/redis/quickstart-create-managed-redis)
+1. Configure Microsoft Entra ID authentication on your cache using the instructions in [Use Microsoft Entra ID for cache authentication](https://learn.microsoft.com/azure/azure-cache-for-redis/cache-azure-active-directory-for-authentication)
     - Optional: if you're using `DefaultAzureCredential` authentication, ensure that either an Azure user is signed on the machine where you're running your code, or environment variables have been set to supply Azure credentials. For details see: [How to authenticate .NET apps to Azure services using the .NET Azure SDK](https://learn.microsoft.com/dotnet/azure/sdk/authentication/). 
 1. `dotnet run <path to Microsoft.Azure.StackExchangeRedis.Sample.csproj>`, or run the project in Visual Studio or your favorite IDE
-1. Follow the prompts to enter your credentials and test the connection to the cache
+1. Follow the prompts to enter your credentials and test the connection to Redis
 1. To see how the connection is maintained by periodically re-authenticating with fresh tokens, let the sample run for longer than a token lifespan (1+ hours).
 
 NOTE: The sample project uses a `<ProjectReference>` to the extension project in this repo. To run the project on its own using the released Microsoft.Azure.StackExchangeRedis NuGet package, replace the `<ProjectReference>` in `Microsoft.Azure.StackExchangeRedis.Sample.csproj` with a `<PackageReference>`.
@@ -80,7 +82,7 @@ The [ASP.NET_Samples](./ASP.NET_Samples) directory contains multiple samples dem
 - **[SessionState](./ASP.NET_Samples/SessionState)** - Demonstrates ASP.NET Core session state backed by Redis distributed caching.
 
 ### ASP.NET Framework sample
-- **[ASP.NET_Framework/SessionState](./ASP.NET_Samples/ASP.NET_Framework/SessionState)** - Demonstrates custom session state caching using Azure Redis Cache in ASP.NET Framework 4.8, featuring distributed locking, JSON serialization, and complete session lifecycle management. This sample does not rely upon the deprecated Microsoft.Web.RedisSessionStateProvider
+- **[ASP.NET_Framework/SessionState](./ASP.NET_Samples/ASP.NET_Framework/SessionState)** - Demonstrates custom session state caching using Azure Redis in ASP.NET Framework 4.8, featuring distributed locking, JSON serialization, and complete session lifecycle management. This sample does not rely upon the deprecated Microsoft.Web.RedisSessionStateProvider
 
 ## Contributing
 Please read our [CONTRIBUTING.md](CONTRIBUTING.md) which outlines all of our policies, procedures, and requirements for contributing to this project.
